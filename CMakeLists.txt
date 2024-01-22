@@ -7,5 +7,5 @@ project(thoracuda
 )
 
 add_executable(thoracuda
-  src/cpp/main.cpp
+  src/cpp/bin/thoracuda.cpp
 )
