@@ -6,6 +6,26 @@ project(thoracuda
   LANGUAGES CXX CUDA
 )
 
-add_executable(thoracuda
+# thoracuda: the library
+add_library(thoracuda
+  src/cpp/pointsources.cpp  
+  src/cpp/projections.cpp
+)
+target_compile_features(thoracuda PUBLIC cxx_std_17)
+target_include_directories(thoracuda PUBLIC extern/eigen src/cpp)
+
+# thoracuda-cli: the executable
+add_executable(thoracuda-cli
   src/cpp/bin/thoracuda.cpp
 )
+target_link_libraries(thoracuda-cli thoracuda)
+
+# tests
+
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+  include(CTest)
+endif()
+
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
+  add_subdirectory(tests)
+endif()
