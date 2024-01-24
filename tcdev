@@ -8,6 +8,7 @@ function usage() {
     echo "  release     Build the project in release mode"
     echo "  clean       Clean the project"
     echo "  test        Run the tests"
+    echo "  benchmark   Run the benchmarks"
     echo "  lint        Run the linter"
     echo "  format	Format the code"
     echo "  help        Display this help message"
@@ -35,9 +36,12 @@ function clean() {
 
 function test() {
     build
-    pushd build/debug
-    ctest -j$(nproc)
-    popd
+    exec ./build/debug/tests/tests --skip-benchmarks "$@"
+}
+
+function benchmark() {
+    release
+    exec ./build/release/tests/tests
 }
 
 function lint() {
@@ -70,6 +74,10 @@ function main() {
 	test)
 	    shift
 	    test "$@"
+	    ;;
+	benchmark)
+	    shift
+	    benchmark "$@"
 	    ;;
 	lint)
 	    shift
