@@ -21,6 +21,7 @@ namespace thoracuda {
     void add(double x, double y, double z, double t);
     Vector3d nth_pos(int n);
     Vector4d nth(int n);
+    double nth_t(int n);
     int size();
   };
 }  // namespace thoracuda

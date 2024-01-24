@@ -1,4 +1,4 @@
-#include "pointsources.hpp"
+#include "cartesian_point_sources.hpp"
 
 using Eigen::Vector3d;
 using Eigen::Vector4d;
@@ -55,3 +55,13 @@ Vector4d CartesianPointSources::nth(int n) {
 }
 
 int CartesianPointSources::size() { return x.size(); }
+
+double CartesianPointSources::nth_t(int n) {
+  if (n >= this->size()) {
+    throw std::out_of_range("CartesianPointSources::nth_t: n is out of range");
+  }
+  if (n < 0) {
+    throw std::out_of_range("CartesianPointSources::nth_t: n is out of range");
+  }
+  return t[n];
+}

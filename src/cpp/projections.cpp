@@ -1,7 +1,14 @@
+#include <cmath>
 #include "projections.hpp"
+#include "gnomonic_point_sources.hpp"
+#include "cartesian_point_sources.hpp"
 
 using Eigen::Matrix3d;
 using Eigen::Vector3d;
+
+static double rad_to_deg(double rad) {
+  return rad * 180 / M_PI;
+}
 
 namespace thoracuda {
   namespace projections {
@@ -51,15 +58,15 @@ namespace thoracuda {
       Matrix3d r1 = Matrix3d::Identity() + nu_skew + nu_skew_squared;
       return r1;
     }
-
+    
     Matrix3d r2_matrix(Matrix3d &r1, Vector3d &center_pos) {
-      // First, rotate the center position vector by r1.
       Vector3d center_pos_rotated = r1 * center_pos;
+      center_pos_rotated.normalize();
 
       Matrix3d r2;
-      r2 << (center_pos_rotated(1), -center_pos_rotated(0), 0,
-	     center_pos_rotated(0), center_pos_rotated(1), 0,
-	     0, 0, 1);
+      r2 << center_pos_rotated(0), center_pos_rotated(1), 0,
+	-center_pos_rotated(1), center_pos_rotated(0), 0,
+	0, 0, 1;
       return r2;
     }
 
@@ -69,6 +76,21 @@ namespace thoracuda {
       return r2 * r1;
     }
 
-    
+    GnomonicPointSources gnomonic_projection(CartesianPointSources &cps, Vector3d &center_pos, Vector3d &center_vel) {
+      Matrix3d r = gnomonic_rotation_matrix(center_pos, center_vel);
+      GnomonicPointSources gps = GnomonicPointSources(cps.size());
+      for (int i = 0; i < cps.size(); i++) {
+	Vector3d pos = cps.nth_pos(i);
+	Vector3d pos_rotated = r * pos;
+	double x = rad_to_deg(pos_rotated(1) / pos_rotated(0));
+	double y = rad_to_deg(pos_rotated(2) / pos_rotated(0));
+	double t = cps.nth_t(i);
+
+	gps.add(x, y, t);
+      }
+      return gps;
+    }
   }  // namespace projections
 }  // namespace thoracuda
+
+ 

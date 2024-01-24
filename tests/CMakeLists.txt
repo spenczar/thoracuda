@@ -9,9 +9,14 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(catch)
 
 # Tests need to be added as an executable
-add_executable(tests test_projections.cpp test_pointsources.cpp)
+add_executable(tests test_projections.cpp test_cartesian_point_sources.cpp)
 target_link_libraries(tests PRIVATE thoracuda)
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
+
+# add -g flag for debug builds
+target_compile_options(tests PRIVATE "$<$<CONFIG:DEBUG>:-g>")
+# add -O3 flag for release builds
+target_compile_options(tests PRIVATE "$<$<CONFIG:RELEASE>:-O3>")
 
 include(CTest)
 include(Catch)

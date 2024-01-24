@@ -8,7 +8,8 @@ project(thoracuda
 
 # thoracuda: the library
 add_library(thoracuda
-  src/cpp/pointsources.cpp  
+  src/cpp/cartesian_point_sources.cpp
+  src/cpp/gnomonic_point_sources.cpp    
   src/cpp/projections.cpp
 )
 target_compile_features(thoracuda PUBLIC cxx_std_17)

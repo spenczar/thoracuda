@@ -1,5 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
-#include "pointsources.hpp"
+#include "cartesian_point_sources.hpp"
 
 using Eigen::Vector3d;
 using Eigen::Vector4d;
