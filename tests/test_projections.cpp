@@ -1,7 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
+#include <catch2/benchmark/catch_benchmark.hpp>
 #include "projections.hpp"
-
+#include <random>
 #include <iostream>
 
 
@@ -86,4 +87,25 @@ TEST_CASE("gnomonic projections consistent with moeyensj/thor", "[gnomonic_proje
   REQUIRE(p0.isApprox(p0_expected));
   REQUIRE(p1.isApprox(p1_expected));
   REQUIRE(p2.isApprox(p2_expected));
+
+  BENCHMARK("gnomonic projection of 3 points") {
+    return tcp::gnomonic_projection(cps, center_pos, center_vel);
+  };
+
+  // Generate ranndom x, y, z within a box centered on the center_pos,
+  // ranging from -0.8 to 1.2 times the center_pos.
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_real_distribution<> dis(-0.8, 1.2);
+  thoracuda::CartesianPointSources cps_100k("W84");
+  for (int i = 0; i < 100'000; i++) {
+    double x = dis(gen) * center_pos(0);
+    double y = dis(gen) * center_pos(1);
+    double z = dis(gen) * center_pos(2);
+    cps_100k.add(x, y, z, 56537.2416032334);
+  }
+  BENCHMARK("gnomonic projection of 100,000 points") {
+    return tcp::gnomonic_projection(cps_100k, center_pos, center_vel);
+  };
 }
+
