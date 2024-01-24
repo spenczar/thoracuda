@@ -51,7 +51,6 @@ Vector4d CartesianPointSources::nth(int n) {
     throw std::out_of_range("CartesianPointSources::nth: n is out of range");
   }
   return Vector4d(x[n], y[n], z[n], t[n]);
-
 }
 
 int CartesianPointSources::size() { return x.size(); }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Eigen/Dense>
+
 #include "cartesian_point_sources.hpp"
 #include "gnomonic_point_sources.hpp"
 
@@ -26,5 +27,5 @@ namespace thoracuda {
     /// @brief Project CartesianPointSources onto a plane tangent to
     /// the center object.
     GnomonicPointSources gnomonic_projection(CartesianPointSources &cps, Vector3d &center_pos, Vector3d &center_vel);
-  }  
-}  
+  }  // namespace projections
+}  // namespace thoracuda
