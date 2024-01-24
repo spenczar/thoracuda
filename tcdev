@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+
+function usage() {
+    echo "Usage: tcdev <command> [options]"
+    echo ""
+    echo "Commands:"
+    echo "  build       Build the project in debug mode"
+    echo "  release     Build the project in release mode"
+    echo "  clean       Clean the project"
+    echo "  test        Run the tests"
+    echo "  lint        Run the linter"
+    echo "  format	Format the code"
+    echo "  help        Display this help message"
+}
+
+function build() {
+    mkdir -p build/debug
+    pushd build/debug
+    cmake -DCMAKE_BUILD_TYPE=Debug ../..
+    make -j$(nproc)
+    popd
+}
+
+function release() {
+    mkdir -p build/release
+    pushd build/release
+    cmake -DCMAKE_BUILD_TYPE=Release ../..
+    make -j$(nproc)
+    popd
+}
+
+function clean() {
+    rm -rf build
+}
+
+function test() {
+    build
+    pushd build/debug
+    ctest -j$(nproc)
+    popd
+}
+
+function lint() {
+    echo "Not implemented yet"
+    exit 1
+}
+
+function format() {
+    clang-format -i $(find ./src/ -name "*.cpp" -o -name "*.hpp")
+}
+
+function help() {
+    usage
+}
+
+function main() {
+    case "$1" in
+	build)
+	    shift
+	    build "$@"
+	    ;;
+	release)
+	    shift
+	    release "$@"
+	    ;;
+	clean)
+	    shift
+	    clean "$@"
+	    ;;
+	test)
+	    shift
+	    test "$@"
+	    ;;
+	lint)
+	    shift
+	    lint "$@"
+	    ;;
+	format)
+	    shift
+	    format "$@"
+	    ;;
+	help)
+	    usage
+	    ;;
+	*)
+	    usage
+	    exit 1
+	    ;;
+    esac
+}
+
+
+main "$@"
