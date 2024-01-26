@@ -64,35 +64,40 @@
 
 #include "rangearray.h"
 
+thrust::host_vector<float2> exposure_xy_data(const Exposure& e) {
+  thrust::host_vector<float2> result(e.x.size());
+  for (int i = 0; i < e.x.size(); ++i) {
+    result[i] = make_float2(e.x[i], e.y[i]);
+  }
+  return result;
+}
+
 DeviceGrid build_grid(const Exposure& e,
 		      const FindPairConfig& config) {
   DeviceGrid result;
 
   // Load x and y into device memory.
-  thrust::host_vector<float> x(e.x);
-  thrust::host_vector<float> y(e.y);
-  thrust::device_vector<float> x_d(x.size());
-  thrust::device_vector<float> y_d(y.size());
-  thrust::copy(x.begin(), x.end(), x_d.begin());
-  thrust::copy(y.begin(), y.end(), y_d.begin());
+  thrust::host_vector<float2> xy_h = exposure_xy_data(e);
+  thrust::device_vector<float2> xy_d(xy_h.size());
+  thrust::copy(xy_h.begin(), xy_h.end(), xy_d.begin());
   
   // Step 1: map x and y to grid cells.
-  thrust::device_vector<struct IntPair> grid_coords =
-    build_grid_coord_map(x_d, y_d, config);
+  thrust::device_vector<short2> grid_coords =
+    build_grid_coord_map(xy_d, config);
 
   // Step 2: sort the grid coords by grid cell.
+  
   return result;
 }
 
-thrust::device_vector<struct IntPair> build_grid_coord_map(const thrust::device_vector<float>& x_d,
-							   const thrust::device_vector<float>& y_d,
-							   const FindPairConfig& config) {
+thrust::device_vector<short2> build_grid_coord_map(const thrust::device_vector<float2>& xy_d,
+						   const FindPairConfig& config) {
   // map x and y to grid cells. Grid cells are notated as a
   // pair of ints, [i, j]. i is the x coordinate, j is the y
   // coordinate. The grid is a fixed size, and is configured by the
   // FindPairConfig.
-  thrust::device_vector<struct IntPair> grid_coords(x_d.size());
-  thrust::transform(x_d.begin(), x_d.end(), y_d.begin(),
+  thrust::device_vector<short2> grid_coords(xy_d.size());
+  thrust::transform(xy_d.begin(), xy_d.end(),
 		    grid_coords.begin(),
 		    GridCoordKernel(config.min_x, config.max_x, config.grid_dim_x,
 				    config.min_y, config.max_y, config.grid_dim_y));
@@ -104,22 +109,9 @@ GridCoordKernel::GridCoordKernel(int min_x, int max_x, int grid_dim_x,
   min_x(min_x), max_x(max_x), grid_dim_x(grid_dim_x),
   min_y(min_y), max_y(max_y), grid_dim_y(grid_dim_y) {}
 
-struct IntPair GridCoordKernel::operator()(float x, float y) {
-  struct IntPair result;
-  result.x = (x - min_x) / (max_x - min_x) * grid_dim_x;
-  result.y = (y - min_y) / (max_y - min_y) * grid_dim_y;
-  return result;
+short2 GridCoordKernel::operator()(float2 xy) {
+  return make_short2((xy.x - min_x) / (max_x - min_x) * grid_dim_x,
+		     (xy.y - min_y) / (max_y - min_y) * grid_dim_y);
 }
 
 
-/* Exposed for testing */
-thrust::host_vector<struct IntPair> build_grid_coord_map(const thrust::host_vector<float>& x,
-							 const thrust::host_vector<float>& y,
-							 const FindPairConfig& config) {
-  thrust::device_vector<float> x_d(x.size());
-  thrust::device_vector<float> y_d(y.size());
-  thrust::copy(x.begin(), x.end(), x_d.begin());
-  thrust::copy(y.begin(), y.end(), y_d.begin());
-  return build_grid_coord_map(x_d, y_d, config);
-}
-   
