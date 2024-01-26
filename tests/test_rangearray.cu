@@ -46,7 +46,7 @@ TEST_CASE("grid calculations", "[cuda]") {
   REQUIRE(pair.y == 125);
 }
 
-TEST_CASE("linking to cuda", "[cuda]") {
+TEST_CASE("building a grid coord map", "[cuda]") {
   thrust::host_vector<float2> xy(3);
   xy[0] = make_float2(1.0, 4.0);
   xy[1] = make_float2(2.0, 5.0);
@@ -66,4 +66,42 @@ TEST_CASE("linking to cuda", "[cuda]") {
   REQUIRE(grid_coords[0].y == 4);
   REQUIRE(grid_coords[1].x == 2);
   REQUIRE(grid_coords[1].y == 5);
+}
+
+TEST_CASE("sort by grid cell", "[cuda]") {
+  thrust::host_vector<float2> xy_h(3);
+  xy_h[0] = make_float2(1.0, 4.0);
+  xy_h[1] = make_float2(2.0, 5.0);
+  xy_h[2] = make_float2(3.0, 6.0);
+  
+  thrust::host_vector<short2> grid_coords_h(3);
+  grid_coords_h[0] = make_short2(1, 4);
+  grid_coords_h[1] = make_short2(2, 5);
+  grid_coords_h[2] = make_short2(1, 6);
+
+  thrust::host_vector<int> indices_h(3);
+  indices_h[0] = 0;
+  indices_h[1] = 1;
+  indices_h[2] = 2;
+
+  thrust::device_vector<float2> xy = xy_h;
+  thrust::device_vector<short2> grid_coords = grid_coords_h;
+  thrust::device_vector<int> indices = indices_h;
+
+  sort_by_grid_cell(grid_coords, xy, indices);
+
+  xy_h = xy;
+  grid_coords_h = grid_coords;
+  indices_h = indices;
+
+  REQUIRE(indices_h[0] == 0);
+  REQUIRE(indices_h[1] == 2);
+  REQUIRE(indices_h[2] == 1);
+
+  REQUIRE(grid_coords_h[0].x == 1);
+  REQUIRE(grid_coords_h[0].y == 4);
+  REQUIRE(grid_coords_h[1].x == 1);
+  REQUIRE(grid_coords_h[1].y == 6);
+  REQUIRE(grid_coords_h[2].x == 2);
+  REQUIRE(grid_coords_h[2].y == 5);
 }

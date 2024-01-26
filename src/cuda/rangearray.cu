@@ -62,6 +62,7 @@
  *    3
  */
 
+#include <thrust/sort.h>
 #include "rangearray.h"
 
 thrust::host_vector<float2> exposure_xy_data(const Exposure& e) {
@@ -72,21 +73,43 @@ thrust::host_vector<float2> exposure_xy_data(const Exposure& e) {
   return result;
 }
 
+struct short2_compare {
+  __host__ __device__ bool operator()(const short2& a, const short2& b) {
+    if (a.x < b.x) {
+      return true;
+    } else if (a.x > b.x) {
+      return false;
+    } else {
+      return a.y < b.y;
+    }
+  }
+};
+
+void sort_by_grid_cell(thrust::device_vector<short2>& grid_coords,
+		       thrust::device_vector<float2>& xy,
+		       thrust::device_vector<int>& ids) {
+  auto zipped = thrust::make_zip_iterator(thrust::make_tuple(xy.begin(), ids.begin()));
+  thrust::sort_by_key(grid_coords.begin(), grid_coords.end(), zipped, short2_compare());
+}
+
+
 DeviceGrid build_grid(const Exposure& e,
 		      const FindPairConfig& config) {
   DeviceGrid result;
 
-  // Load x and y into device memory.
+  // Load x, y, and IDs into device memory.
   thrust::host_vector<float2> xy_h = exposure_xy_data(e);
-  thrust::device_vector<float2> xy_d(xy_h.size());
-  thrust::copy(xy_h.begin(), xy_h.end(), xy_d.begin());
+  thrust::device_vector<float2> xy_d(xy_h);
+
+  thrust::host_vector<int> ids_h(e.id);
+  thrust::device_vector<int> ids_d(ids_h);
   
   // Step 1: map x and y to grid cells.
   thrust::device_vector<short2> grid_coords =
     build_grid_coord_map(xy_d, config);
 
-  // Step 2: sort the grid coords by grid cell.
-  
+  // Step 2: sort by grid cell.
+  sort_by_grid_cell(grid_coords, xy_d, ids_d);
   return result;
 }
 

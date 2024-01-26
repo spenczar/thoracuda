@@ -53,3 +53,7 @@ DeviceGrid build_grid(const Exposure& e, const FindPairConfig& config);
 thrust::device_vector<short2> build_grid_coord_map(const thrust::device_vector<float2>& xy_d,
 						   const FindPairConfig& config);
 
+void sort_by_grid_cell(thrust::device_vector<short2>& grid_coords,
+		       thrust::device_vector<float2>& xy,
+		       thrust::device_vector<int>& ids);
+
