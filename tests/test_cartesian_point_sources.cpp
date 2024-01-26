@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+
 #include "cartesian_point_sources.hpp"
 
 using Eigen::Vector3d;
@@ -20,7 +21,7 @@ TEST_CASE("CartesianPointSources constructor with capacity", "[CartesianPointSou
 
 TEST_CASE("CartesianPointSources constructor with empty vectors", "[CartesianPointSources]") {
   tc::CartesianPointSources cps3 = tc::CartesianPointSources("500", std::vector<double>(), std::vector<double>(),
-																														 std::vector<double>(), std::vector<double>());
+                                                             std::vector<double>(), std::vector<double>());
 
   REQUIRE(cps3.size() == 0);
   REQUIRE(cps3.obscode == "500");

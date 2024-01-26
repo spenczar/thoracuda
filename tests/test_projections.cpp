@@ -1,10 +1,10 @@
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/catch_approx.hpp>
 #include <catch2/benchmark/catch_benchmark.hpp>
-#include "projections.hpp"
-#include <random>
+#include <catch2/catch_approx.hpp>
+#include <catch2/catch_test_macros.hpp>
 #include <iostream>
+#include <random>
 
+#include "projections.hpp"
 
 using Eigen::Matrix3d;
 using Eigen::Vector3d;
@@ -32,9 +32,9 @@ TEST_CASE("R1 matrix golden test", "[r1_matrix]") {
   Eigen::Matrix3d r1 = tcp::r1_matrix(center_pos, center_vel);
 
   Eigen::Matrix3d r1_expected;
-  r1_expected << 9.992273655465606e-01, -5.389407578454692e-04, 3.929861938719766e-02,
-    		-5.389407578454692e-04, 9.996240691323380e-01, 2.741222271480839e-02,
-    		-3.929861938719766e-02, -2.741222271480839e-02, 9.988514346788986e-01;
+  r1_expected << 9.992273655465606e-01, -5.389407578454692e-04, 3.929861938719766e-02, -5.389407578454692e-04,
+      9.996240691323380e-01, 2.741222271480839e-02, -3.929861938719766e-02, -2.741222271480839e-02,
+      9.988514346788986e-01;
 
   REQUIRE(r1.isApprox(r1_expected));
 }
@@ -44,9 +44,7 @@ TEST_CASE("R2 matrix golden test", "[r2_matrix]") {
   Eigen::Matrix3d r2 = tcp::r2_matrix(r1, center_pos);
 
   Eigen::Matrix3d r2_expected;
-  r2_expected << 0.981107616210045, -0.193462775268636, 0.0,
-		  0.193462775268636, 0.981107616210045, 0.0,
-		  0.0, 0.0, 1.0;
+  r2_expected << 0.981107616210045, -0.193462775268636, 0.0, 0.193462775268636, 0.981107616210045, 0.0, 0.0, 0.0, 1.0;
 
   REQUIRE(r2.isApprox(r2_expected));
 }
@@ -55,15 +53,13 @@ TEST_CASE("gnomonic rotation matrix", "[gnomonic_rotation_matrix]") {
   Eigen::Matrix3d m = tcp::gnomonic_rotation_matrix(center_pos, center_vel);
 
   Eigen::Matrix3d m_expected;
-  m_expected << 0.980453843637948, -0.193918805521877,  0.033252930104631,
-    		0.192784540380797,  0.980634522597895,  0.034497160453618,
-    		-0.039298619387198, -0.027412222714808,  0.998851434678899;
+  m_expected << 0.980453843637948, -0.193918805521877, 0.033252930104631, 0.192784540380797, 0.980634522597895,
+      0.034497160453618, -0.039298619387198, -0.027412222714808, 0.998851434678899;
 
   REQUIRE(m.isApprox(m_expected));
 }
 
 TEST_CASE("gnomonic projections consistent with moeyensj/thor", "[gnomonic_projection]") {
-
   thoracuda::CartesianPointSources cps("W84");
   cps.add(2.32724566583692, -0.449382385055792, 0.0866176471970003, 56537.2416032334);
   cps.add(2.32728038367672, -0.44938629368127, 0.0856592596632065, 56537.2416032334);
@@ -88,9 +84,7 @@ TEST_CASE("gnomonic projections consistent with moeyensj/thor", "[gnomonic_proje
   REQUIRE(p1.isApprox(p1_expected));
   REQUIRE(p2.isApprox(p2_expected));
 
-  BENCHMARK("gnomonic projection of 3 points") {
-    return tcp::gnomonic_projection(cps, center_pos, center_vel);
-  };
+  BENCHMARK("gnomonic projection of 3 points") { return tcp::gnomonic_projection(cps, center_pos, center_vel); };
 
   // Generate ranndom x, y, z within a box centered on the center_pos,
   // ranging from -0.8 to 1.2 times the center_pos.
@@ -108,4 +102,3 @@ TEST_CASE("gnomonic projections consistent with moeyensj/thor", "[gnomonic_proje
     return tcp::gnomonic_projection(cps_100k, center_pos, center_vel);
   };
 }
-

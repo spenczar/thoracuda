@@ -15,14 +15,18 @@ add_library(thoracuda
 target_compile_features(thoracuda PUBLIC cxx_std_17)
 target_include_directories(thoracuda PUBLIC extern/eigen src/cpp)
 
+add_library(thoracuda_cuda
+  src/cuda/rangearray.cu
+)
+target_include_directories(thoracuda_cuda PUBLIC src/cuda)
+
 # thoracuda-cli: the executable
 add_executable(thoracuda-cli
   src/cpp/bin/thoracuda.cpp
 )
-target_link_libraries(thoracuda-cli thoracuda)
+target_link_libraries(thoracuda-cli thoracuda thoracuda_cuda)
 
 # tests
-
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   include(CTest)
 endif()
