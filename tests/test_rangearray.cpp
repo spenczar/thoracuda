@@ -49,10 +49,8 @@ TEST_CASE("grid calculations", "[cuda]") {
 TEST_CASE("linking to cuda", "[cuda]") {
   std::vector<float> x = {1.0, 2.0, 3.0};
   std::vector<float> y = {4.0, 5.0, 6.0};
-  std::vector<int> id = {0, 1, 2};
-  
-  Exposure e = Exposure(x, y, id, 0.0);
-
+  thrust::host_vector<float> x_h(x);
+  thrust::host_vector<float> y_h(y);
   struct FindPairConfig config;
   config.min_x = 0.0;
   config.max_x = 10.0;
@@ -60,10 +58,7 @@ TEST_CASE("linking to cuda", "[cuda]") {
   config.max_y = 10.0;
   config.grid_dim_x = 10;
   config.grid_dim_y = 10;
-
-  thrust::device_vector<struct IntPair> device_grid_coords = build_grid_coord_map(e, config);
-
-  thrust::host_vector<struct IntPair> grid_coords = device_grid_coords;
+  thrust::host_vector<struct IntPair> grid_coords = build_grid_coord_map(x_h, y_h, config);
 
   REQUIRE(grid_coords.size() == 3);
   REQUIRE(grid_coords[0].x == 1);

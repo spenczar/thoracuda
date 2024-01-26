@@ -66,20 +66,9 @@
 
 DeviceGrid build_grid(const Exposure& e,
 		      const FindPairConfig& config) {
-
   DeviceGrid result;
-  // Step 1: map x and y to grid cells.
-  thrust::device_vector<struct IntPair> grid_coords =
-    build_grid_coord_map(e, config);
-  return result;
-}
 
-thrust::device_vector<struct IntPair> build_grid_coord_map(const Exposure& e,
-							   const FindPairConfig& config) {
-  // map x and y to grid cells. Grid cells are notated as a
-  // pair of ints, [i, j]. i is the x coordinate, j is the y
-  // coordinate. The grid is a fixed size, and is configured by the
-  // FindPairConfig.
+  // Load x and y into device memory.
   thrust::host_vector<float> x(e.x);
   thrust::host_vector<float> y(e.y);
   thrust::device_vector<float> x_d(x.size());
@@ -87,7 +76,22 @@ thrust::device_vector<struct IntPair> build_grid_coord_map(const Exposure& e,
   thrust::copy(x.begin(), x.end(), x_d.begin());
   thrust::copy(y.begin(), y.end(), y_d.begin());
   
-  thrust::device_vector<struct IntPair> grid_coords(x.size());
+  // Step 1: map x and y to grid cells.
+  thrust::device_vector<struct IntPair> grid_coords =
+    build_grid_coord_map(x_d, y_d, config);
+
+  // Step 2: sort the grid coords by grid cell.
+  return result;
+}
+
+thrust::device_vector<struct IntPair> build_grid_coord_map(const thrust::device_vector<float>& x_d,
+							   const thrust::device_vector<float>& y_d,
+							   const FindPairConfig& config) {
+  // map x and y to grid cells. Grid cells are notated as a
+  // pair of ints, [i, j]. i is the x coordinate, j is the y
+  // coordinate. The grid is a fixed size, and is configured by the
+  // FindPairConfig.
+  thrust::device_vector<struct IntPair> grid_coords(x_d.size());
   thrust::transform(x_d.begin(), x_d.end(), y_d.begin(),
 		    grid_coords.begin(),
 		    GridCoordKernel(config.min_x, config.max_x, config.grid_dim_x,
@@ -107,3 +111,15 @@ struct IntPair GridCoordKernel::operator()(float x, float y) {
   return result;
 }
 
+
+/* Exposed for testing */
+thrust::host_vector<struct IntPair> build_grid_coord_map(const thrust::host_vector<float>& x,
+							 const thrust::host_vector<float>& y,
+							 const FindPairConfig& config) {
+  thrust::device_vector<float> x_d(x.size());
+  thrust::device_vector<float> y_d(y.size());
+  thrust::copy(x.begin(), x.end(), x_d.begin());
+  thrust::copy(y.begin(), y.end(), y_d.begin());
+  return build_grid_coord_map(x_d, y_d, config);
+}
+   

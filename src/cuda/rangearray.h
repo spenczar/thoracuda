@@ -57,6 +57,12 @@ public:
 };
 
 DeviceGrid build_grid(const Exposure& e, const FindPairConfig& config);
-thrust::device_vector<struct IntPair> build_grid_coord_map(const Exposure& e,
+thrust::device_vector<struct IntPair> build_grid_coord_map(const thrust::device_vector<float>& x_d,
+							   const thrust::device_vector<float>& y_d,
 							   const FindPairConfig& config);
 
+
+/* Exposed for testing */
+thrust::host_vector<struct IntPair> build_grid_coord_map(const thrust::host_vector<float>& x_d,
+							 const thrust::host_vector<float>& y_d,
+							 const FindPairConfig& config);
