@@ -30,9 +30,9 @@
  *
  *   2. A dense matrix of int32 pairs, M. M[i, j] corresponds to
  *      asking about grid cell i,j, and contains the offset into the
- *      array where its points can be found, as well as the number of
- *      points in that cell. If the cell has _no_ points, then the
- *      offset will be negative.
+ *      array where its points can be found, as well as the offset to
+ *      the _end_ of the sequence of points. If the cell has _no_
+ *      points, then the cell will hold (0,0).
  *
  *   3. A contiguous array of all point IDs, in same order as 1.
  *
@@ -50,8 +50,8 @@
  *    [ymin, ymax] bounds.
  * 
  * 2. For each [i, j] pair, a thread checks M, and if the count is >
- *    0, it writes <count> integers (from <start_pos> to <start_pos +
- *    count>) into some sort of shared array for input point.
+ *    0, it writes <count> integers (from <start_pos> to <end_pos>)
+ *    into some sort of shared array for input point.
  *
  * 3. That shared array is condensed and sorted. Now it contains
  *    indexes that could be queried in parallel, to inspect and see if
@@ -73,6 +73,7 @@ thrust::host_vector<float2> exposure_xy_data(const Exposure& e) {
   return result;
 }
 
+// Auxiliary for sorting grid coords
 struct short2_compare {
   __host__ __device__ bool operator()(const short2& a, const short2& b) {
     if (a.x < b.x) {
@@ -110,6 +111,11 @@ DeviceGrid build_grid(const Exposure& e,
 
   // Step 2: sort by grid cell.
   sort_by_grid_cell(grid_coords, xy_d, ids_d);
+
+  // Step 3: build the dense matrixes.
+  result.grid = build_dense_matrix(grid_coords, config.grid_dim_y);
+  result.point_ids = ids_d;
+  result.points = xy_d;
   return result;
 }
 
@@ -138,3 +144,75 @@ short2 GridCoordKernel::operator()(float2 xy) {
 }
 
 
+thrust::device_vector<int2> build_dense_matrix(thrust::device_vector<short2>& grid_coords,
+					       int grid_dim_y) {
+  thrust::device_vector<int2> matrix(grid_dim_y * grid_dim_y);
+  int n = grid_coords.size();
+  int block_size = 256;
+  int n_blocks = (n + block_size - 1) / block_size;
+  build_dense_matrix_kernel<<<n_blocks, block_size>>>(thrust::raw_pointer_cast(grid_coords.data()),
+						      n,
+						      grid_dim_y,
+						      thrust::raw_pointer_cast(matrix.data()));
+  return matrix;
+}
+__global__ void build_dense_matrix_kernel(short2 *grid_coords_data,
+					  int n,
+					  int grid_dim_y,
+					  int2 *matrix) {
+  /*
+   * This kernel is responsible for building the dense matrix. It
+   * requires that grid_coords_data be sorted by grid cell, and that
+   * the matrix be initialized to all zeros.
+   *
+   * The (i, j)th cell of the matrix will be populated if there is at
+   * least one value of (i, j) in grid_coords_data.
+   *
+   * The cell will have a pair of values indicating the position of
+   * the sequence of (i, j) values. The first value in the pair is the
+   * index to the start of the sequence, and the second value is the
+   * (exclusive) index for the end of the sequence.
+   */
+  int i = threadIdx.x + blockIdx.x * blockDim.x;
+  if (i >= n) {
+    return;
+  }
+  short2 grid_coord = grid_coords_data[i];
+
+  int start_offset = -1;
+  int end_offset = -1;
+  if (i == 0) {
+    // Special case: first cell can't handle looking backwards. It is
+    // always a start.
+    start_offset = 0;
+  } else {
+    short2 prev_grid_coord = grid_coords_data[i - 1];
+    if ((grid_coord.x != prev_grid_coord.x) || (grid_coord.y != prev_grid_coord.y)) {
+      // present index is a start offset for the new grid coord
+      start_offset = i;
+    }
+  }
+
+  if (i == (n - 1)) {
+    end_offset = n;
+  } else {
+    short2 next_grid_coord = grid_coords_data[i + 1];
+    if ((grid_coord.x != next_grid_coord.x) || (grid_coord.y != next_grid_coord.y)) {
+      // present index is an end offset for the new grid coord
+      end_offset = i + 1;
+    }
+  }
+
+  if (start_offset < 0 && end_offset < 0) {
+    // No change to the matrix, since we're in the middle of a run.
+    return;
+  }
+
+  int dense_idx = grid_coord.x * grid_dim_y + grid_coord.y;
+  if (start_offset >= 0) {
+    matrix[dense_idx].x = start_offset;
+  }
+  if (end_offset >= 0) {
+    matrix[dense_idx].y = end_offset;
+  }
+}

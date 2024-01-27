@@ -17,6 +17,7 @@ class Exposure {
   x(x), y(y), id(id), t(t) {}
 };
 
+
 struct FindPairConfig {
   float max_vx;
   float max_vy;
@@ -34,8 +35,7 @@ struct FindPairConfig {
 
 class DeviceGrid {
 public:
-  thrust::device_vector<int> grid_offsets;
-  thrust::device_vector<int> grid_counts;
+  thrust::device_vector<int2> grid;
   thrust::device_vector<int> point_ids;
   thrust::device_vector<float2> points;
 };
@@ -50,6 +50,8 @@ public:
 };
 
 DeviceGrid build_grid(const Exposure& e, const FindPairConfig& config);
+
+
 thrust::device_vector<short2> build_grid_coord_map(const thrust::device_vector<float2>& xy_d,
 						   const FindPairConfig& config);
 
@@ -57,3 +59,11 @@ void sort_by_grid_cell(thrust::device_vector<short2>& grid_coords,
 		       thrust::device_vector<float2>& xy,
 		       thrust::device_vector<int>& ids);
 
+
+thrust::device_vector<int2> build_dense_matrix(thrust::device_vector<short2>& grid_coords,
+					       int grid_dim_y);
+
+__global__ void build_dense_matrix_kernel(short2 *grid_coords_data,
+					  int n,
+					  int grid_dim_y,
+					  int2 *matrix);

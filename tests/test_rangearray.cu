@@ -1,5 +1,10 @@
+#include <iostream>
+#
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h>
 
 #include "rangearray.h"
 
@@ -104,4 +109,60 @@ TEST_CASE("sort by grid cell", "[cuda]") {
   REQUIRE(grid_coords_h[1].y == 6);
   REQUIRE(grid_coords_h[2].x == 2);
   REQUIRE(grid_coords_h[2].y == 5);
+}
+
+
+TEST_CASE("build dense matrix", "[cuda]") {
+
+  thrust::host_vector<short2> grid_coords_h(10);
+  grid_coords_h[0] = make_short2(0, 0);
+  grid_coords_h[1] = make_short2(0, 0);
+  grid_coords_h[2] = make_short2(0, 0);
+  grid_coords_h[3] = make_short2(1, 1);
+  grid_coords_h[4] = make_short2(1, 2);
+  grid_coords_h[5] = make_short2(2, 0);
+  grid_coords_h[6] = make_short2(2, 0);
+  grid_coords_h[7] = make_short2(2, 0);
+  grid_coords_h[8] = make_short2(2, 0);
+  grid_coords_h[9] = make_short2(3, 2);
+
+  int grid_dim_y = 4;
+
+  thrust::host_vector<int2> expected_h(16);
+  /* Cells hold (index, count) pairs.
+   * Expected output:
+   * (0, 3), (0, 0), (0, 0), (0, 0)
+   * (0, 0), (3, 4), (4, 5), (0, 0)
+   * (5, 9), (0, 0), (0, 0), (0, 0)
+   * (0, 0), (0, 0), (9, 10), (0, 0)
+   */
+  expected_h[0] = make_int2(0, 3);
+  expected_h[1] = make_int2(0, 0);
+  expected_h[2] = make_int2(0, 0);
+  expected_h[3] = make_int2(0, 0);
+
+  expected_h[4] = make_int2(0, 0);
+  expected_h[5] = make_int2(3, 4);
+  expected_h[6] = make_int2(4, 5);
+  expected_h[7] = make_int2(0, 0);
+
+  expected_h[8] = make_int2(5, 9);
+  expected_h[9] = make_int2(0, 0);
+  expected_h[10] = make_int2(0, 0);
+  expected_h[11] = make_int2(0, 0);
+
+  expected_h[12] = make_int2(0, 0);
+  expected_h[13] = make_int2(0, 0);
+  expected_h[14] = make_int2(9, 10);
+  expected_h[15] = make_int2(0, 0);
+  thrust::device_vector<short2> grid_coords_d = grid_coords_h;
+  thrust::device_vector<int2> actual_d = build_dense_matrix(grid_coords_d, grid_dim_y);
+
+  thrust::host_vector<int2> actual_h = actual_d;
+
+  REQUIRE(actual_h.size() == 16);
+  for (int i = 0; i < 16; i++) {
+    REQUIRE(actual_h[i].x == expected_h[i].x);
+    REQUIRE(actual_h[i].y == expected_h[i].y);
+  }
 }
