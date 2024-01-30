@@ -17,8 +17,16 @@ function usage() {
 function build() {
     mkdir -p build/debug
     pushd build/debug
-    cmake -DCMAKE_BUILD_TYPE=Debug ../..
+    cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ../..
     make -j$(nproc)
+    popd
+}
+
+function update-rtags {
+    build
+    pushd build/debug
+    rdm
+    rc -J .
     popd
 }
 
@@ -51,6 +59,7 @@ function lint() {
 
 function format() {
     clang-format -i $(find ./src/ -name "*.cpp" -o -name "*.hpp")
+    clang-format -i $(find ./src/cuda -name "*.cu" -o -name "*.h")    
 }
 
 function help() {

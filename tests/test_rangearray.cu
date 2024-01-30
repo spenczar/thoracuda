@@ -11,7 +11,7 @@
 using Catch::Approx;
 
 TEST_CASE("grid calculations", "[cuda]") {
-  GridCoordKernel kernel(0, 10, 10, 0, 10, 10);
+  GridCoordKernel kernel(0.0, 10.0, 0.0, 10.0, 10);
   short2 pair = kernel(make_float2(0, 0));
 
   REQUIRE(pair.x == 0);
@@ -22,7 +22,7 @@ TEST_CASE("grid calculations", "[cuda]") {
   REQUIRE(pair.x == 9);
   REQUIRE(pair.y == 9);
 
-  kernel = GridCoordKernel(0, 10, 5, 0, 10, 5);
+  kernel = GridCoordKernel(0.0, 10.0, 0.0, 10.0, 5);
   pair = kernel(make_float2(0, 0));
 
   REQUIRE(pair.x == 0);
@@ -33,7 +33,7 @@ TEST_CASE("grid calculations", "[cuda]") {
   REQUIRE(pair.x == 4);
   REQUIRE(pair.y == 4);
 
-  kernel = GridCoordKernel(-10, 10, 250, -10, 10, 250);
+  kernel = GridCoordKernel(-10.0, 10.0, -10.0, 10.0, 250);
 
   pair = kernel(make_float2(-10, -10));
 
@@ -62,8 +62,7 @@ TEST_CASE("building a grid coord map", "[cuda]") {
   config.max_x = 10.0;
   config.min_y = 0.0;
   config.max_y = 10.0;
-  config.grid_dim_x = 10;
-  config.grid_dim_y = 10;
+  config.grid_n_cells_1d = 10;
   thrust::host_vector<short2> grid_coords = build_grid_coord_map(xy, config);
 
   REQUIRE(grid_coords.size() == 3);
@@ -126,7 +125,7 @@ TEST_CASE("build dense matrix", "[cuda]") {
   grid_coords_h[8] = make_short2(2, 0);
   grid_coords_h[9] = make_short2(3, 2);
 
-  int grid_dim_y = 4;
+  int grid_n_cells_1d = 4;
 
   thrust::host_vector<int2> expected_h(16);
   /* Cells hold (index, count) pairs.
@@ -156,7 +155,7 @@ TEST_CASE("build dense matrix", "[cuda]") {
   expected_h[14] = make_int2(9, 10);
   expected_h[15] = make_int2(0, 0);
   thrust::device_vector<short2> grid_coords_d = grid_coords_h;
-  thrust::device_vector<int2> actual_d = build_dense_matrix(grid_coords_d, grid_dim_y);
+  thrust::device_vector<int2> actual_d = build_dense_matrix(grid_coords_d, grid_n_cells_1d);
 
   thrust::host_vector<int2> actual_h = actual_d;
 

@@ -88,5 +88,6 @@ namespace thoracuda {
       }
       return gps;
     }
+
   }  // namespace projections
 }  // namespace thoracuda

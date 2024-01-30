@@ -24,7 +24,7 @@
  * points. The grid's resolution isn't certain yet - it probably has a
  * lot of tradeoffs. The data structure, one constructed, has two
  * parts:
- * 
+ *
  *   1. A contiguous array of the x-y points, sorted so that all x-y
  *      points in the same grid cell appear sequentially.
  *
@@ -48,7 +48,7 @@
  *
  * 1. calculate all the [i, j] pairs within the [xmin, xmax] and
  *    [ymin, ymax] bounds.
- * 
+ *
  * 2. For each [i, j] pair, a thread checks M, and if the count is >
  *    0, it writes <count> integers (from <start_pos> to <end_pos>)
  *    into some sort of shared array for input point.
@@ -63,6 +63,7 @@
  */
 
 #include <thrust/sort.h>
+
 #include "rangearray.h"
 
 thrust::host_vector<float2> exposure_xy_data(const Exposure& e) {
@@ -86,16 +87,13 @@ struct short2_compare {
   }
 };
 
-void sort_by_grid_cell(thrust::device_vector<short2>& grid_coords,
-		       thrust::device_vector<float2>& xy,
-		       thrust::device_vector<int>& ids) {
+void sort_by_grid_cell(thrust::device_vector<short2>& grid_coords, thrust::device_vector<float2>& xy,
+                       thrust::device_vector<int>& ids) {
   auto zipped = thrust::make_zip_iterator(thrust::make_tuple(xy.begin(), ids.begin()));
   thrust::sort_by_key(grid_coords.begin(), grid_coords.end(), zipped, short2_compare());
 }
 
-
-DeviceGrid build_grid(const Exposure& e,
-		      const FindPairConfig& config) {
+DeviceGrid build_grid(const Exposure& e, const FindPairConfig& config) {
   DeviceGrid result;
 
   // Load x, y, and IDs into device memory.
@@ -104,62 +102,62 @@ DeviceGrid build_grid(const Exposure& e,
 
   thrust::host_vector<int> ids_h(e.id);
   thrust::device_vector<int> ids_d(ids_h);
-  
+
   // Step 1: map x and y to grid cells.
-  thrust::device_vector<short2> grid_coords =
-    build_grid_coord_map(xy_d, config);
+  thrust::device_vector<short2> grid_coords = build_grid_coord_map(xy_d, config);
 
   // Step 2: sort by grid cell.
   sort_by_grid_cell(grid_coords, xy_d, ids_d);
 
   // Step 3: build the dense matrixes.
-  result.grid = build_dense_matrix(grid_coords, config.grid_dim_y);
+  result.grid = build_dense_matrix(grid_coords, config.grid_n_cells_1d);
   result.point_ids = ids_d;
   result.points = xy_d;
   return result;
 }
 
 thrust::device_vector<short2> build_grid_coord_map(const thrust::device_vector<float2>& xy_d,
-						   const FindPairConfig& config) {
+                                                   const FindPairConfig& config) {
   // map x and y to grid cells. Grid cells are notated as a
   // pair of ints, [i, j]. i is the x coordinate, j is the y
   // coordinate. The grid is a fixed size, and is configured by the
   // FindPairConfig.
   thrust::device_vector<short2> grid_coords(xy_d.size());
-  thrust::transform(xy_d.begin(), xy_d.end(),
-		    grid_coords.begin(),
-		    GridCoordKernel(config.min_x, config.max_x, config.grid_dim_x,
-				    config.min_y, config.max_y, config.grid_dim_y));
+  thrust::transform(xy_d.begin(), xy_d.end(), grid_coords.begin(),
+                    GridCoordKernel(config.min_x, config.max_x, config.min_y, config.max_y, config.grid_n_cells_1d));
   return grid_coords;
 }
 
-GridCoordKernel::GridCoordKernel(int min_x, int max_x, int grid_dim_x,
-				 int min_y, int max_y, int grid_dim_y) :
-  min_x(min_x), max_x(max_x), grid_dim_x(grid_dim_x),
-  min_y(min_y), max_y(max_y), grid_dim_y(grid_dim_y) {}
-
-short2 GridCoordKernel::operator()(float2 xy) {
-  return make_short2((xy.x - min_x) / (max_x - min_x) * grid_dim_x,
-		     (xy.y - min_y) / (max_y - min_y) * grid_dim_y);
+GridCoordKernel::GridCoordKernel(float min_x, float max_x, float min_y, float max_y, int grid_n_cells_1d)
+    : min_x(min_x), max_x(max_x), min_y(min_y), max_y(max_y), grid_n_cells_1d(grid_n_cells_1d) {
+  float x_extent = max_x - min_x;
+  float y_extent = max_y - min_y;
+  if (x_extent > y_extent) {
+    // x is the limiting dimension
+    grid_cell_width = x_extent / grid_n_cells_1d;
+  } else {
+    // y is the limiting dimension
+    grid_cell_width = y_extent / grid_n_cells_1d;
+  }
 }
 
+short2 GridCoordKernel::operator()(float2 xy) {
+  short2 result;
+  result.x = (xy.x - min_x) / grid_cell_width;
+  result.y = (xy.y - min_y) / grid_cell_width;
+  return result;
+}
 
-thrust::device_vector<int2> build_dense_matrix(thrust::device_vector<short2>& grid_coords,
-					       int grid_dim_y) {
+thrust::device_vector<int2> build_dense_matrix(thrust::device_vector<short2>& grid_coords, int grid_dim_y) {
   thrust::device_vector<int2> matrix(grid_dim_y * grid_dim_y);
   int n = grid_coords.size();
   int block_size = 256;
   int n_blocks = (n + block_size - 1) / block_size;
-  build_dense_matrix_kernel<<<n_blocks, block_size>>>(thrust::raw_pointer_cast(grid_coords.data()),
-						      n,
-						      grid_dim_y,
-						      thrust::raw_pointer_cast(matrix.data()));
+  build_dense_matrix_kernel<<<n_blocks, block_size>>>(thrust::raw_pointer_cast(grid_coords.data()), n, grid_dim_y,
+                                                      thrust::raw_pointer_cast(matrix.data()));
   return matrix;
 }
-__global__ void build_dense_matrix_kernel(short2 *grid_coords_data,
-					  int n,
-					  int grid_dim_y,
-					  int2 *matrix) {
+__global__ void build_dense_matrix_kernel(short2* grid_coords_data, int n, int grid_dim_y, int2* matrix) {
   /*
    * This kernel is responsible for building the dense matrix. It
    * requires that grid_coords_data be sorted by grid cell, and that
