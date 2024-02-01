@@ -1,156 +1,114 @@
 // Reimplementation of rangearray.cu to only use C instead of C++
+#include <assert.h>
+
 #include <iostream>
 
+#include "cuda_macros.h"
 #include "rangearray_c.h"
 
-int copy_xyvec_to_device(struct XYPairVector *xyvec_h, struct XYPairVector *xyvec_d) {
-  int err;
-
-  struct XYPair *xy_d = NULL;
-  err = cudaMalloc((void **)&xy_d, (size_t)(xyvec_h->n * sizeof(struct XYPair)));
-  if (err != cudaSuccess) {
-    return ERR_CUDA_MALLOC;
-  }
-
-  err = cudaMemcpy((void *)xy_d, xyvec_h->xy, xyvec_h->n * sizeof(struct XYPair), cudaMemcpyHostToDevice);
-  if (err != cudaSuccess) {
-    cudaFree(xy_d);
-    return ERR_CUDA_MEMCPY;
-  }
-  xyvec_d->xy = xy_d;
-  xyvec_d->n = xyvec_h->n;
-  return 0;
-}
-
-struct XYPairVector xyvec_create() {
-  struct XYPairVector xyvec;
-  xyvec.n = 0;
-  xyvec.xy = NULL;
-  return xyvec;
-}
-
-int xyvec_init(struct XYPairVector *xyvec, int n) {
-  xyvec->n = n;
-  xyvec->xy = (struct XYPair *)malloc(n * sizeof(struct XYPair));
-  if (xyvec->xy == NULL) {
-    return ERR_MALLOC;
-  }
-  return 0;
-}
-
-void xyvec_free(struct XYPairVector *xyvec) {
-  free(xyvec->xy);
-  xyvec->xy = NULL;
-  xyvec->n = 0;
-}
-
-void xyvec_cuda_free(struct XYPairVector *xyvec) {
-  if (xyvec->xy != NULL) {
-    cudaFree(xyvec->xy);
-  }
-  xyvec->xy = NULL;
-}
-
-struct XYVectorBounds xyvec_bounds(struct XYPairVector *xyvec_h) {
-  struct XYVectorBounds bounds;
-  bounds.xmin = xyvec_h->xy[0].x;
-  bounds.xmax = xyvec_h->xy[0].x;
-  bounds.ymin = xyvec_h->xy[0].y;
-  bounds.ymax = xyvec_h->xy[0].y;
-  for (int i = 1; i < xyvec_h->n; i++) {
-    if (xyvec_h->xy[i].x < bounds.xmin) {
-      bounds.xmin = xyvec_h->xy[i].x;
+struct XYBounds xy_bounds_serial(struct XYPair *xys, int n) {
+  struct XYBounds bounds;
+  bounds.xmin = xys[0].x;
+  bounds.xmax = xys[0].x;
+  bounds.ymin = xys[0].y;
+  bounds.ymax = xys[0].y;
+  for (int i = 1; i < n; i++) {
+    if (xys[i].x < bounds.xmin) {
+      bounds.xmin = xys[i].x;
     }
-    if (xyvec_h->xy[i].x > bounds.xmax) {
-      bounds.xmax = xyvec_h->xy[i].x;
+    if (xys[i].x > bounds.xmax) {
+      bounds.xmax = xys[i].x;
     }
-    if (xyvec_h->xy[i].y < bounds.ymin) {
-      bounds.ymin = xyvec_h->xy[i].y;
+    if (xys[i].y < bounds.ymin) {
+      bounds.ymin = xys[i].y;
     }
-    if (xyvec_h->xy[i].y > bounds.ymax) {
-      bounds.ymax = xyvec_h->xy[i].y;
+    if (xys[i].y > bounds.ymax) {
+      bounds.ymax = xys[i].y;
     }
   }
   return bounds;
 }
 
-int xyvec_bounds_parallel(struct XYPairVector *xyvec_h, struct XYVectorBounds *bounds) {
-  int err = 0;
+int xy_bounds_parallel(struct XYPair *xys, int n, struct XYBounds *bounds) {
+  // Computes the min and max values of x and y in an array of X-Y
+  // pairs.
+  //
+  // This is done in parallel on the GPU. There are three kernels:
+  //
+  //  1. Map the xy pairs to {min_x: x, max_x: x, min_y: y, max_y: y}
+  //     in a big array of length n.
+  //
+  //  2. Reduce that big array, block-wise. Each CUDA block computes
+  //     the _actual_ min and max values within a chunk of values, and
+  //     writes the result into a smaller array of length n_blocks.
+  //
+  //  3. Reduce the n_block long array into a final answer.
+  //
+  // The first step is pretty trivial - just a transformation.
+  //
+  // The second step and third steps are a reduce operation. This
+  // happens on a single block, and uses block shared memory as a
+  // scratch space. There needs to be one "slot" per thread, where a
+  // "slot" is a Bounds struct (size 4 * float).
+  cudaError_t err;
   int threads_per_block = 256;
-  int nblocks = (xyvec_h->n + threads_per_block - 1) / threads_per_block;
-  int shared_mem_size = threads_per_block * sizeof(struct XYVectorBounds);
+  int nblocks = (n + threads_per_block - 1) / threads_per_block;
+  int shared_mem_size = threads_per_block * sizeof(struct XYBounds);
   int npad = threads_per_block - nblocks;
 
-  struct XYVectorBounds *bounds_d = NULL;
-  struct XYVectorBounds *bounds_per_block_d = NULL;
-  struct XYPairVector xyvec_d;
+  struct XYBounds *bounds_d = NULL;
+  struct XYBounds *bounds_per_block_d = NULL;
 
-  err = copy_xyvec_to_device(xyvec_h, &xyvec_d);
-  if (err != 0) {
-    goto fail;
-  }
+  // Copy the xys to the device.
+  struct XYPair *xys_d;
+
+  int xys_size = n * sizeof(struct XYPair);
+  CUDA_OR_FAIL(cudaMalloc((void **)&xys_d, xys_size));
+  CUDA_OR_FAIL(cudaMemcpy(xys_d, xys, xys_size, cudaMemcpyHostToDevice));
 
   // Parallel reduction to find min/max
   // First, transform the xyvec into a bounds array
-  err = cudaMalloc((void **)&bounds_d, xyvec_d.n * sizeof(struct XYVectorBounds));
-  if (err != cudaSuccess) {
-    err = ERR_CUDA_MALLOC;
-    goto fail;
-  }
-  xyvec_bounds_transform_kernel<<<nblocks, threads_per_block>>>(xyvec_d.xy, xyvec_d.n, bounds_d);
-  err = cudaGetLastError();
-  if (err != cudaSuccess) {
-    goto fail;
-  }
-  
+  CUDA_OR_FAIL(cudaMalloc((void **)&bounds_d, n * sizeof(struct XYBounds)));
+
+  xyvec_bounds_transform_kernel<<<nblocks, threads_per_block>>>(xys_d, n, bounds_d);
+  CUDA_CHECK_ERROR();
+
   // Next, reduce the bounds array to a single block
-  err = cudaMalloc((void **)&bounds_per_block_d, threads_per_block * sizeof(struct XYVectorBounds));
-  if (err != cudaSuccess) {
-    err = ERR_CUDA_MALLOC;
-    goto fail;
-  }
+  CUDA_OR_FAIL(cudaMalloc((void **)&bounds_per_block_d, threads_per_block * sizeof(struct XYBounds)));
+  xyvec_bounds_reduce_kernel<<<nblocks, threads_per_block, shared_mem_size>>>(bounds_d, n, bounds_per_block_d);
+  CUDA_CHECK_ERROR();
 
-  xyvec_bounds_reduce_kernel<<<nblocks, threads_per_block, shared_mem_size>>>(bounds_d, xyvec_d.n, bounds_per_block_d);
-  err = cudaGetLastError();
-  if (err != cudaSuccess) {
-    goto fail;
-  }
+  // Finally, reduce the last block to a single value. We can reuse
+  // bounds_d for this. But first, pad bounds_per_block with
+  // INFINITY/-INFINITY
+  //
+  // If there are more blocks than threads, then this padding is a
+  // little more complicated, as is the kernel invocation. That's not
+  // implemented yet.
+  assert(nblocks <= threads_per_block);
 
-  // Finally, reduce the last block to a single value. We can reuse bounds_d for this.
-  // But first, pad bounds_per_block with INFINITY/-INFINITY
   if (npad > 0) {
-    struct XYVectorBounds pad = {INFINITY, -INFINITY, INFINITY, -INFINITY};
-    struct XYVectorBounds *pad_h = (struct XYVectorBounds *)malloc(npad * sizeof(struct XYVectorBounds));
-    
+    struct XYBounds pad = {INFINITY, -INFINITY, INFINITY, -INFINITY};
+    int padsize = npad * sizeof(struct XYBounds);
+    struct XYBounds *pad_h = (struct XYBounds *)malloc(padsize);
+
     for (int i = 0; i < npad; i++) {
       pad_h[i] = pad;
     }
-    err = cudaMemcpy((void *)(bounds_per_block_d + nblocks), pad_h, npad * sizeof(struct XYVectorBounds), cudaMemcpyHostToDevice);
+    // Can't use the macro here, because we need to free pad_h
+    err = cudaMemcpy((void *)(bounds_per_block_d + nblocks), pad_h, padsize, cudaMemcpyHostToDevice);
     free(pad_h);
     if (err != cudaSuccess) {
-      err = ERR_CUDA_MEMCPY;
       goto fail;
     }
   }
 
   xyvec_bounds_reduce_kernel<<<1, threads_per_block, shared_mem_size>>>(bounds_per_block_d, nblocks, bounds_d);
-  err = cudaGetLastError();
-  if (err != cudaSuccess) {
-    goto fail;
-  }
+  CUDA_CHECK_ERROR();
 
-  err = cudaDeviceSynchronize();
-  if (err != cudaSuccess) {
-    goto fail;
-  }
+  CUDA_OR_FAIL(cudaMemcpy(bounds, bounds_d, sizeof(struct XYBounds), cudaMemcpyDeviceToHost));
+  CUDA_OR_FAIL(cudaDeviceSynchronize());
 
-  err = cudaMemcpy(bounds, bounds_d, sizeof(struct XYVectorBounds), cudaMemcpyDeviceToHost);
-  if (err != cudaSuccess) {
-    err = ERR_CUDA_MEMCPY;
-    goto fail;
-  }
-  
-  err = 0;
 fail:
   if (bounds_per_block_d != NULL) {
     cudaFree(bounds_per_block_d);
@@ -158,30 +116,32 @@ fail:
   if (bounds_d != NULL) {
     cudaFree(bounds_d);
   }
-  xyvec_cuda_free(&xyvec_d);
+  if (xys_d != NULL) {
+    cudaFree(xys_d);
+  }
   return err;
 }
 
-__global__ void xyvec_bounds_reduce_kernel(struct XYVectorBounds *bounds, int n, struct XYVectorBounds *bounds_per_block) {
-  extern __shared__ struct XYVectorBounds tmp[];
+__global__ void xyvec_bounds_reduce_kernel(struct XYBounds *bounds, int n, struct XYBounds *bounds_per_block) {
+  extern __shared__ struct XYBounds tmp[];
   int tid = threadIdx.x;
-  tmp[tid] = (tid < n) ? bounds[tid] : (struct XYVectorBounds){INFINITY, -INFINITY, INFINITY, -INFINITY};
+  tmp[tid] = (tid < n) ? bounds[tid] : (struct XYBounds){INFINITY, -INFINITY, INFINITY, -INFINITY};
   __syncthreads();
   for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
     if (tid < stride) {
-      XYVectorBounds have = tmp[tid];
-      XYVectorBounds merge = tmp[tid + stride];
+      XYBounds have = tmp[tid];
+      XYBounds merge = tmp[tid + stride];
       if (merge.xmin < have.xmin) {
-	have.xmin = merge.xmin;
+        have.xmin = merge.xmin;
       }
       if (merge.xmax > have.xmax) {
-	have.xmax = merge.xmax;
+        have.xmax = merge.xmax;
       }
       if (merge.ymin < have.ymin) {
-	have.ymin = merge.ymin;
+        have.ymin = merge.ymin;
       }
       if (merge.ymax > have.ymax) {
-	have.ymax = merge.ymax;
+        have.ymax = merge.ymax;
       }
       tmp[tid] = have;
     }
@@ -189,15 +149,14 @@ __global__ void xyvec_bounds_reduce_kernel(struct XYVectorBounds *bounds, int n,
   }
 
   if (tid == 0) {
-    // debug printing
     bounds_per_block[blockIdx.x] = tmp[0];
   }
 }
 
-__global__ void xyvec_bounds_transform_kernel(struct XYPair *xy, int n, struct XYVectorBounds *bounds) {
-  // Map each xy to an XYVectorBounds
+__global__ void xyvec_bounds_transform_kernel(struct XYPair *xy, int n, struct XYBounds *bounds) {
+  // Map each xy to an XYBounds
   int i = blockIdx.x * blockDim.x + threadIdx.x;
-  struct XYVectorBounds b;
+  struct XYBounds b;
   if (i >= n) {
     b.xmin = INFINITY;
     b.xmax = -INFINITY;

@@ -7,37 +7,35 @@ int main() {
   int result;
   int n = 1000000;
 
-  struct XYPairVector xyvec;
-  result = xyvec_init(&xyvec, n);
-  if (result != 0) {
-    return result;
+  struct XYPair *xys = (struct XYPair *)(malloc(n * sizeof(struct XYPair)));
+  if (xys == NULL) {
+    return 1;
   }
-
-  struct XYVectorBounds actual_bounds = {
+  struct XYBounds actual_bounds = {
       .xmin = INFINITY,
       .xmax = -INFINITY,
       .ymin = INFINITY,
       .ymax = -INFINITY,
   };
   for (int i = 0; i < n; i++) {
-    xyvec.xy[i].x = rand() % 100000;
-    xyvec.xy[i].y = rand() % 100000;
-    if (xyvec.xy[i].x < actual_bounds.xmin) {
-      actual_bounds.xmin = xyvec.xy[i].x;
+    xys[i].x = rand() % 100000;
+    xys[i].y = rand() % 100000;
+    if (xys[i].x < actual_bounds.xmin) {
+      actual_bounds.xmin = xys[i].x;
     }
-    if (xyvec.xy[i].x > actual_bounds.xmax) {
-      actual_bounds.xmax = xyvec.xy[i].x;
+    if (xys[i].x > actual_bounds.xmax) {
+      actual_bounds.xmax = xys[i].x;
     }
-    if (xyvec.xy[i].y < actual_bounds.ymin) {
-      actual_bounds.ymin = xyvec.xy[i].y;
+    if (xys[i].y < actual_bounds.ymin) {
+      actual_bounds.ymin = xys[i].y;
     }
-    if (xyvec.xy[i].y > actual_bounds.ymax) {
-      actual_bounds.ymax = xyvec.xy[i].y;
+    if (xys[i].y > actual_bounds.ymax) {
+      actual_bounds.ymax = xys[i].y;
     }
   }
-  struct XYVectorBounds have_bounds;
+  struct XYBounds have_bounds;
 
-  result = xyvec_bounds_parallel(&xyvec, &have_bounds);
+  result = xy_bounds_parallel(xys, n, &have_bounds);
   if (result != 0) {
     return result;
   }

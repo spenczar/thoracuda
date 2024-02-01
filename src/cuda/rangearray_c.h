@@ -21,16 +21,7 @@ struct XYPair {
   float y;
 };
 
-struct XYPairVector {
-  struct XYPair *xy;
-  int n;
-};
-
-int xyvec_init(struct XYPairVector *xyvec, int n);
-void xyvec_free(struct XYPairVector *xyvec);
-void xyvec_cuda_free(struct XYPairVector *xyvec);
-
-struct XYVectorBounds {
+struct XYBounds {
   float xmin;
   float xmax;
   float ymin;
@@ -38,11 +29,9 @@ struct XYVectorBounds {
 };
 
 // Function prototypes
-int copy_xyvec_to_device(struct XYPairVector *xyvec_h, struct XYPairVector *xyvec_d);
-struct XYVectorBounds xyvec_bounds(struct XYPairVector *xyvec_h);
-int xyvec_bounds_parallel(struct XYPairVector *xyvec_h, struct XYVectorBounds *bounds);
-__global__ void xyvec_bounds_reduce_kernel(struct XYVectorBounds *bounds, int n, struct XYVectorBounds *bounds_per_block);
-__global__ void xyvec_bounds_transform_kernel(struct XYPair *xy, int n, struct XYVectorBounds *bounds);
-int build_grid_coord_map(struct XYPairVector *xyvec_h, int n);
+struct XYBounds xy_bounds_serial(struct XYPair *xys, int n);
+int xy_bounds_parallel(struct XYPair *xys, int n, struct XYBounds *bounds);
+__global__ void xyvec_bounds_transform_kernel(struct XYPair *xy, int n, struct XYBounds *bounds);
+__global__ void xyvec_bounds_reduce_kernel(struct XYBounds *bounds, int n, struct XYBounds *bounds_per_block);
 
 #endif  // RANGEARRAY_CU_H

@@ -13,36 +13,33 @@ using Catch::Approx;
 TEST_CASE("xyvec_parallel", "") {
   int result;
   int n = 100;
-  
-  struct XYPairVector xyvec;
-  result = xyvec_init(&xyvec, n);
-  REQUIRE(result == 0);
 
-  struct XYVectorBounds actual_bounds = {
+  struct XYPair *xys = (struct XYPair*)(malloc(n * sizeof(struct XYPair)));
+  struct XYBounds actual_bounds = {
     .xmin = INFINITY,
     .xmax = -INFINITY,
     .ymin = INFINITY,
     .ymax = -INFINITY,
   };
   for (int i = 0; i < n; i++) {
-    xyvec.xy[i].x = rand() % 100000;
-    xyvec.xy[i].y = rand() % 100000;
-    if(xyvec.xy[i].x < actual_bounds.xmin) {
-      actual_bounds.xmin = xyvec.xy[i].x;
+    xys[i].x = rand() % 100000;
+    xys[i].y = rand() % 100000;
+    if(xys[i].x < actual_bounds.xmin) {
+      actual_bounds.xmin = xys[i].x;
     }
-    if(xyvec.xy[i].x > actual_bounds.xmax) {
-      actual_bounds.xmax = xyvec.xy[i].x;
+    if(xys[i].x > actual_bounds.xmax) {
+      actual_bounds.xmax = xys[i].x;
     }
-    if(xyvec.xy[i].y < actual_bounds.ymin) {
-      actual_bounds.ymin = xyvec.xy[i].y;
+    if(xys[i].y < actual_bounds.ymin) {
+      actual_bounds.ymin = xys[i].y;
     }
-    if(xyvec.xy[i].y > actual_bounds.ymax) {
-      actual_bounds.ymax = xyvec.xy[i].y;
+    if(xys[i].y > actual_bounds.ymax) {
+      actual_bounds.ymax = xys[i].y;
     }
   }
-  struct XYVectorBounds have_bounds;
+  struct XYBounds have_bounds;
 
-  result = xyvec_bounds_parallel(&xyvec, &have_bounds);
+  result = xy_bounds_parallel(xys, n, &have_bounds);
   REQUIRE(result == 0);
 
   REQUIRE(have_bounds.xmin == actual_bounds.xmin);
@@ -50,20 +47,20 @@ TEST_CASE("xyvec_parallel", "") {
   REQUIRE(have_bounds.ymin == actual_bounds.ymin);
   REQUIRE(have_bounds.ymax == actual_bounds.ymax);
 
-  BENCHMARK("xyvec_bounds_parallel") {
-    return xyvec_bounds_parallel(&xyvec, &have_bounds);
+  BENCHMARK("xy_bounds_parallel") {
+    return xy_bounds_parallel(xys, n, &have_bounds);
   };
 
   std::cout << "serial implementation" << std::endl;
-  have_bounds = xyvec_bounds(&xyvec);
+  have_bounds = xy_bounds_serial(xys, n);
   REQUIRE(have_bounds.xmin == actual_bounds.xmin);
   REQUIRE(have_bounds.xmax == actual_bounds.xmax);
   REQUIRE(have_bounds.ymin == actual_bounds.ymin);
   REQUIRE(have_bounds.ymax == actual_bounds.ymax);
 
   std::cout << "serial implementation done" << std::endl;
-  BENCHMARK("xyvec_bounds_serial") {
-    return xyvec_bounds(&xyvec);
+  BENCHMARK("xy_bounds_serial") {
+    return xy_bounds_serial(xys, n);
   };
 }
 
