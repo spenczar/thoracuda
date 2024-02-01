@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
+set(CMAKE_CXX_FLAGS "-g")
+set(CMAKE_CUDA_FLAGS "-lineinfo")
 project(thoracuda
   VERSION 0.1.0
   DESCRIPTION "CUDA-accelerated implementation of THOR, an orbit recovery algorithm for small bodies in the solar system"
@@ -17,6 +19,7 @@ target_include_directories(thoracuda PUBLIC extern/eigen src/cpp)
 
 add_library(thoracuda_cuda
   src/cuda/rangearray.cu
+  src/cuda/rangearray_c.cu
 )
 target_include_directories(thoracuda_cuda PUBLIC src/cuda)
 
@@ -25,6 +28,11 @@ add_executable(thoracuda-cli
   src/cpp/bin/thoracuda.cpp
 )
 target_link_libraries(thoracuda-cli thoracuda thoracuda_cuda)
+
+add_executable(thoracuda-pminmax
+  src/cpp/bin/thoracuda_pminmax.cpp
+)
+target_link_libraries(thoracuda-pminmax thoracuda thoracuda_cuda)
 
 # tests
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
