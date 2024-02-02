@@ -6,7 +6,8 @@
 #include <catch2/catch_test_macros.hpp>
 
 
-#include "rangearray_c.h"
+#include "pair.h"
+#include "pairminmax.h"
 
 using Catch::Approx;
 

@@ -19,7 +19,7 @@ target_include_directories(thoracuda PUBLIC extern/eigen src/cpp)
 
 add_library(thoracuda_cuda
   src/cuda/rangearray.cu
-  src/cuda/rangearray_c.cu
+  src/cuda/pairminmax.cu
 )
 target_include_directories(thoracuda_cuda PUBLIC src/cuda)
 

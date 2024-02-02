@@ -3,6 +3,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <iostream>
 #include <random>
+#include <Eigen/Dense>
 
 #include "projections.hpp"
 

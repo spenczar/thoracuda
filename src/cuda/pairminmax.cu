@@ -1,10 +1,10 @@
-// Reimplementation of rangearray.cu to only use C instead of C++
 #include <assert.h>
 
 #include <iostream>
 
 #include "cuda_macros.h"
-#include "rangearray_c.h"
+#include "pairminmax.h"
+#include "pair.h"
 
 struct XYBounds xy_bounds_serial(struct XYPair *xys, int n) {
   struct XYBounds bounds;

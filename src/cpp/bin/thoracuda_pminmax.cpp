@@ -1,7 +1,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-#include "rangearray_c.h"
+#include "pairminmax.h"
 
 int main() {
   int result;
