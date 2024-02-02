@@ -9,7 +9,13 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(catch)
 
 # Tests need to be added as an executable
-add_executable(tests test_projections.cpp test_cartesian_point_sources.cpp test_rangearray.cu test_pairminmax.cu)
+add_executable(tests
+  test_projections.cpp
+  test_cartesian_point_sources.cpp
+  test_rangearray.cu
+  test_pairminmax.cu
+  test_gridify.cu
+)
 target_link_libraries(tests PRIVATE thoracuda)
 target_link_libraries(tests PRIVATE thoracuda_cuda)
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)

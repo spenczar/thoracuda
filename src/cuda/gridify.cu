@@ -4,28 +4,11 @@
 #include "cuda_macros.h"
 #include "pair.h"
 #include "pairminmax.h"
+#include "gridify.h"
 
 #define GRID_WIDTH_CELLS 64
 #define GRID_HEIGHT_CELLS 64
 
-struct IndexPair {
-  int start;
-  int end;
-};
-
-struct Grid {
-  struct IndexPair* address_map;
-
-  int n;
-  struct XYPair *xys;
-  double *ts;
-};
-
-struct CellPosition {
-  short x;
-  short y;
-  short t;
-};
 
 struct CellPosition xy_to_cell(struct XYPair xy, struct XYBounds bounds, double t, double t_min) {
   return {
@@ -33,14 +16,6 @@ struct CellPosition xy_to_cell(struct XYPair xy, struct XYBounds bounds, double 
     .y = (short)((xy.y - bounds.ymin) / (bounds.ymax - bounds.ymin) * GRID_HEIGHT_CELLS),
     .t = (short)(t - t_min)
   };
-};
-
-struct SortableData {
-  struct XYPair *xys;
-  double *ts;
-
-  struct XYBounds bounds;
-  double t_min;
 };
 
 int xy_compare_txy(const void *a, const void *b, void *data) {
@@ -125,7 +100,8 @@ int gridify_points_serial(struct XYPair* xys, double *t, int n, struct Grid *gri
   grid->ts = ts_reindexed;
   
   // Now, we can start to gridify the points.
-  address_map_size = GRID_WIDTH_CELLS * GRID_HEIGHT_CELLS * (ts_reindexed[n - 1] - ts_reindexed[0] + 1);
+  address_map_size = GRID_WIDTH_CELLS * GRID_HEIGHT_CELLS * ((int)ts_reindexed[n - 1] - (int)ts_reindexed[0] + 1);
+  grid->address_map_n = address_map_size;
   grid->address_map = (struct IndexPair*)malloc(sizeof(struct IndexPair) * address_map_size);
   if (!grid->address_map) {
     goto fail;
@@ -164,3 +140,7 @@ int gridify_points_serial(struct XYPair* xys, double *t, int n, struct Grid *gri
   return 1;
 }
 
+struct IndexPair grid_query(struct CellPosition cp, struct Grid *grid) {
+  int index = cp.t * GRID_WIDTH_CELLS * GRID_HEIGHT_CELLS + cp.y * GRID_WIDTH_CELLS + cp.x;
+  return grid->address_map[index];
+}
