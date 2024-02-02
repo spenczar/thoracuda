@@ -8,9 +8,9 @@
 #endif
 
 #if PRINT_CUDA_ERRORS
-#define PRINT_CUDA_ERROR(err)                                            \
-  do {                                                                   \
-    std::cerr << "CUDA error: " << cudaGetErrorString(err) << std::endl; \
+#define PRINT_CUDA_ERROR(err)                                                                                       \
+  do {                                                                                                              \
+    std::cerr << "CUDA error from " << __FILE__ << ":" << __LINE__ << ": " << cudaGetErrorString(err) << std::endl; \
   } while (0)
 #else
 #define PRINT_CUDA_ERROR(err) \

@@ -12,7 +12,7 @@ using Catch::Approx;
 
 TEST_CASE("xyvec_parallel", "") {
   int result;
-  int n = 100;
+  int n = 10000;
 
   struct XYPair *xys = (struct XYPair*)(malloc(n * sizeof(struct XYPair)));
   struct XYBounds actual_bounds = {
@@ -51,14 +51,12 @@ TEST_CASE("xyvec_parallel", "") {
     return xy_bounds_parallel(xys, n, &have_bounds);
   };
 
-  std::cout << "serial implementation" << std::endl;
   have_bounds = xy_bounds_serial(xys, n);
   REQUIRE(have_bounds.xmin == actual_bounds.xmin);
   REQUIRE(have_bounds.xmax == actual_bounds.xmax);
   REQUIRE(have_bounds.ymin == actual_bounds.ymin);
   REQUIRE(have_bounds.ymax == actual_bounds.ymax);
 
-  std::cout << "serial implementation done" << std::endl;
   BENCHMARK("xy_bounds_serial") {
     return xy_bounds_serial(xys, n);
   };
