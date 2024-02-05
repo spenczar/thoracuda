@@ -4,4 +4,3 @@ struct XYPair {
   float x;
   float y;
 };
-

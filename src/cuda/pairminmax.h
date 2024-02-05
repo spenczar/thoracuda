@@ -23,5 +23,3 @@ cudaError_t xy_bounds_parallel(struct XYPair *xys, int n, struct XYBounds *bound
 cudaError_t xy_bounds_parallel_on_device(struct XYPair *xys, int n, struct XYBounds *bounds);
 __global__ void xyvec_bounds_transform_kernel(struct XYPair *xy, int n, struct XYBounds *bounds);
 __global__ void xyvec_bounds_reduce_kernel(struct XYBounds *bounds, int n, struct XYBounds *bounds_per_block);
-
-

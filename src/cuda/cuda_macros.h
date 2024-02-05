@@ -1,5 +1,9 @@
 #pragma once
 
+#include <stdio.h>
+
+#include <iostream>
+
 // This file contains some useful macros for CUDA programming.
 //
 // PRINT_CUDA_ERRORS: if set to 1, print out CUDA errors to stderr.

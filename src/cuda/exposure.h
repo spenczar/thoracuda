@@ -6,4 +6,3 @@ struct Exposure {
   int n;
   double t;  // MJD
 };
-

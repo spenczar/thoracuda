@@ -3,8 +3,8 @@
 #include <iostream>
 
 #include "cuda_macros.h"
-#include "pairminmax.h"
 #include "pair.h"
+#include "pairminmax.h"
 
 struct XYBounds xy_bounds_serial(struct XYPair *xys, int n) {
   struct XYBounds bounds;
