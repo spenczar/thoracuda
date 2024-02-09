@@ -12,10 +12,10 @@ int main() {
     return 1;
   }
   struct XYBounds actual_bounds = {
-      .xmin = INFINITY,
-      .xmax = -INFINITY,
-      .ymin = INFINITY,
-      .ymax = -INFINITY,
+      INFINITY,
+      -INFINITY,
+      INFINITY,
+      -INFINITY,
   };
   for (int i = 0; i < n; i++) {
     xys[i].x = rand() % 100000;

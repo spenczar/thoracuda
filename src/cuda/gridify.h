@@ -21,6 +21,7 @@ struct CellPosition {
   short x;
   short y;
   short t;
+  short padding;
 };
 
 __host__ __device__ struct CellPosition xy_to_cell(struct XYPair xy, struct XYBounds bounds, double t, double t_min);

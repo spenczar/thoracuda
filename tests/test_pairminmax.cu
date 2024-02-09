@@ -16,6 +16,7 @@ TEST_CASE("xyvec_parallel", "") {
   int n = 10000;
 
   struct XYPair *xys = (struct XYPair*)(malloc(n * sizeof(struct XYPair)));
+  REQUIRE(xys != NULL);
   struct XYBounds actual_bounds = {
     .xmin = INFINITY,
     .xmax = -INFINITY,
@@ -61,5 +62,7 @@ TEST_CASE("xyvec_parallel", "") {
   BENCHMARK("xy_bounds_serial") {
     return xy_bounds_serial(xys, n);
   };
+
+  free(xys);
 }
 

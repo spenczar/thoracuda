@@ -5,6 +5,7 @@
 #include "gridify.h"
 #include "pair.h"
 
+
 TEST_CASE("gridify_serial", "") {
   int N = 10000;
   struct XYPair xys[N];

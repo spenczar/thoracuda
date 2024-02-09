@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 3.10)
 
-set(CMAKE_CXX_FLAGS "-g")
-set(CMAKE_CUDA_FLAGS "-lineinfo")
+# If debug:
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+	set(CMAKE_CXX_FLAGS "-g -fsanitize=address -fno-omit-frame-pointer -Wall -Wextra -Wpedantic -Werror")
+	set(CMAKE_CUDA_FLAGS "-lineinfo")
+endif()
 project(thoracuda
   VERSION 0.1.0
   DESCRIPTION "CUDA-accelerated implementation of THOR, an orbit recovery algorithm for small bodies in the solar system"
@@ -20,7 +23,7 @@ target_include_directories(thoracuda PUBLIC extern/eigen src/cpp)
 add_library(thoracuda_cuda
   src/cuda/rangearray.cu
   src/cuda/pairminmax.cu
-  src/cuda/gridify.cu
+  src/cuda/hotspot2d.cu
 )
 target_include_directories(thoracuda_cuda PUBLIC src/cuda)
 

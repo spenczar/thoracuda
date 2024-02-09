@@ -7,7 +7,7 @@ using Eigen::MatrixXd;
 
 namespace tcp = thoracuda::projections;
 
-int main(int argc, char** argv) {
+int main() {
   MatrixXd m(2, 2);
   m(0, 0) = 3;
   m(1, 0) = 2.5;

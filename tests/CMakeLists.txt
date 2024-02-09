@@ -14,7 +14,7 @@ add_executable(tests
   test_cartesian_point_sources.cpp
   test_rangearray.cu
   test_pairminmax.cu
-  test_gridify.cu
+  test_hotspot2d.cu
 )
 target_link_libraries(tests PRIVATE thoracuda)
 target_link_libraries(tests PRIVATE thoracuda_cuda)
