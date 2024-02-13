@@ -16,6 +16,7 @@ add_library(thoracuda
   src/cpp/cartesian_point_sources.cpp
   src/cpp/gnomonic_point_sources.cpp    
   src/cpp/projections.cpp
+  src/cpp/kdtree.cpp
 )
 target_compile_features(thoracuda PUBLIC cxx_std_17)
 target_include_directories(thoracuda PUBLIC extern/eigen src/cpp)

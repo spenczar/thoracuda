@@ -6,10 +6,10 @@ using Eigen::Vector3d;
 
 namespace thoracuda {
   class GnomonicPointSources {
+   public:
     std::vector<double> x;
     std::vector<double> y;
     std::vector<double> t;  // MJD
-   public:
     GnomonicPointSources();
     GnomonicPointSources(std::vector<double> x, std::vector<double> y, std::vector<double> t);
     GnomonicPointSources(int capacity);

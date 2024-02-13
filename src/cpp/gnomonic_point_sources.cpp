@@ -1,5 +1,7 @@
 #include "gnomonic_point_sources.hpp"
 
+#include <vector>
+
 using Eigen::Vector3d;
 using thoracuda::GnomonicPointSources;
 

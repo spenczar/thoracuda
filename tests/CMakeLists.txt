@@ -15,6 +15,7 @@ add_executable(tests
   test_rangearray.cu
   test_pairminmax.cu
   test_hotspot2d.cu
+  test_kdtree.cpp
 )
 target_link_libraries(tests PRIVATE thoracuda)
 target_link_libraries(tests PRIVATE thoracuda_cuda)
