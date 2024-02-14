@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 
 # If debug:
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-	set(CMAKE_CXX_FLAGS "-g -fsanitize=address -fno-omit-frame-pointer -Wall -Wextra -Wpedantic -Werror")
+	set(CMAKE_CXX_FLAGS "-g -fno-omit-frame-pointer -Wall -Wextra -Wpedantic -Werror")
 	set(CMAKE_CUDA_FLAGS "-lineinfo")
 endif()
 project(thoracuda
@@ -17,6 +17,7 @@ add_library(thoracuda
   src/cpp/gnomonic_point_sources.cpp    
   src/cpp/projections.cpp
   src/cpp/kdtree.cpp
+  src/cpp/dbscan.cpp
 )
 target_compile_features(thoracuda PUBLIC cxx_std_17)
 target_include_directories(thoracuda PUBLIC extern/eigen src/cpp)

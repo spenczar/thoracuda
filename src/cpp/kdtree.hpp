@@ -12,6 +12,14 @@ namespace thoracuda {
   namespace kdtree {
     float median(std::vector<double> vals);
     enum SplitDimension { X, Y };
+    
+    struct IDPoint {
+      int id;
+      float x;
+      float y;
+      float t;
+      IDPoint(int id, float x, float y, float t);
+    };
 
     struct IDPoints {
       std::vector<int> ids;
@@ -20,6 +28,13 @@ namespace thoracuda {
       // Merge two IDPoints objects
       IDPoints(std::vector<int> ids, GnomonicPointSources points);
       IDPoints(IDPoints p1, IDPoints p2);
+      IDPoints();
+
+      bool empty();
+      IDPoint pop();
+      void push(IDPoint p);
+      void extend(IDPoints p);
+      int size();
     };
 
     struct LeafNode {

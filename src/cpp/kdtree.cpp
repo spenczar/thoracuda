@@ -16,7 +16,7 @@ LeafNode::LeafNode(GnomonicPointSources points, std::vector<int> ids) {
 }
 
 IDPoints LeafNode::range_query_x(float x_min, float x_max) {
-  GnomonicPointSources points;
+  GnomonicPointSources points(this->points.size());
   std::vector<int> ids;
   for (int i = 0; i < this->points.size(); i++) {
     if (x_min <= this->points.x[i] && this->points.x[i] <= x_max) {
@@ -28,7 +28,7 @@ IDPoints LeafNode::range_query_x(float x_min, float x_max) {
 }
 
 IDPoints LeafNode::range_query_y(float y_min, float y_max) {
-  GnomonicPointSources points;
+  GnomonicPointSources points(this->points.size());
   std::vector<int> ids;
   for (int i = 0; i < this->points.size(); i++) {
     if (y_min <= this->points.y[i] && this->points.y[i] <= y_max) {
@@ -37,6 +37,11 @@ IDPoints LeafNode::range_query_y(float y_min, float y_max) {
     }
   }
   return IDPoints(ids, points);
+}
+
+IDPoints::IDPoints() {
+  this->ids = std::vector<int>();
+  this->points = GnomonicPointSources();
 }
 
 IDPoints::IDPoints(std::vector<int> ids, GnomonicPointSources points) {
@@ -51,6 +56,45 @@ IDPoints::IDPoints(IDPoints p1, IDPoints p2) {
   this->points.x.insert(this->points.x.end(), p2.points.x.begin(), p2.points.x.end());
   this->points.y.insert(this->points.y.end(), p2.points.y.begin(), p2.points.y.end());
   this->points.t.insert(this->points.t.end(), p2.points.t.begin(), p2.points.t.end());
+}
+
+bool IDPoints::empty() {
+  return this->ids.empty();
+}
+
+IDPoint IDPoints::pop() {
+  int id = this->ids.back();
+  this->ids.pop_back();
+  float x = this->points.x.back();
+  this->points.x.pop_back();
+  float y = this->points.y.back();
+  this->points.y.pop_back();
+  float t = this->points.t.back();
+  this->points.t.pop_back();
+  return IDPoint(id, x, y, t);
+}
+
+void IDPoints::extend(IDPoints p) {
+  this->ids.insert(this->ids.end(), p.ids.begin(), p.ids.end());
+  this->points.x.insert(this->points.x.end(), p.points.x.begin(), p.points.x.end());
+  this->points.y.insert(this->points.y.end(), p.points.y.begin(), p.points.y.end());
+  this->points.t.insert(this->points.t.end(), p.points.t.begin(), p.points.t.end());
+}
+
+void IDPoints::push(IDPoint p) {
+  this->ids.push_back(p.id);
+  this->points.add(p.x, p.y, p.t);
+}
+
+int IDPoints::size() {
+  return this->ids.size();
+}
+
+IDPoint::IDPoint(int id, float x, float y, float t) {
+  this->id = id;
+  this->x = x;
+  this->y = y;
+  this->t = t;
 }
 
 KDNode::KDNode(SplitDimension dim, GnomonicPointSources points, std::vector<int> ids, int max_leaf_size) {
