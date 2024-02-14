@@ -98,6 +98,75 @@ cudaError_t _hotspot2d_parallel_on_device(const struct XYPair *xys_d, const floa
   int n_boundaries_d;
   CUDA_OR_FAIL(find_exposure_boundaries(ts_d, n, &boundaries_d, &n_boundaries_d));
 
+  /*
+   For each velocity offset (vx, vy) in the search space:
+
+    A. Compute shifted xys based on the velocity offset and the time
+       of the datapoint.
+    B. Quantize the (shifted) xys to a uniform grid.
+    C. Sort the quantized data. Simultaneously sort ids_d.
+    D. Search the quantized data for runs of length > min_points.
+       i. Compare element i with i - 1. Write a 1 if different, 0 if same.
+       ii. Prefix sum the above.
+       iii. Compact the indexes i using the prefix sums. The ith
+         element of the result is the index that starts run i. Call this runs[].
+       iv. Compute runs[j] - runs[j-1]. If > min_cluster_size, then the run
+         starting at j and ending at j-1 in the sorted data is a cluster of
+         interest. Emit the cluster length (runs[j] - runs[j-1]) if so, else 0.
+         Call this lengths[].
+       v. Prefix sum lengths[]. Call this length_sums[]. This
+         becomes an array used to gather the clustered data
+         points. The total tells us how much memory to allocate for
+         in-cluster points.
+       vi. Gather the clusters:
+         for j in range(0, len(runs)):
+           if lengths[j] > 0:
+              data_start_idx = runs[j-1]
+              data_end_idx = runs[j]
+              output_start_idx = length_sums[j]
+              k = 0
+              while (data_start_idx < data_end_idx) {
+                  out[output_start_idx + k] = ids[data_start_idx]
+                  k++
+                  data_start_idx++
+              }
+         This writes data point IDs to a contiguous array. Cluster
+         boundaries are to be found by compacting length_sums.
+
+
+    Speed note: this could be improved in step D.vi. by reducing
+    thread divergence by only working with clusters that are over
+    the threshold...
+
+    Maybe something like:
+
+    1. Use length_sums[] to compact lengths[], producing
+       cluster_lengths[]. Simultaneously compact runs[], producing
+       cluster_runs[]. The cluster_lengths[i] is the length of the ith
+       cluster. cluster_runs[i] is the start index of the ith cluster
+       _in the sorted data_.
+
+    2. Exclusive scan the cluster_lengths to produce
+       sum_cluster_lengths[]; the kth element of _that_ is the start
+       index of the kth cluster in a result dataset.
+
+    3.
+      for i in range (0, len(cluster_lengths)):
+          n = cluster_lengths[i]
+          j = cluster_runs[i]
+          offset = sum_cluster_lengths[i]
+          k = 0
+          for (; j + k < n; k++) {
+             out[offset + k] = data[j]
+          }
+
+     The result is that out contains runs of cluster
+     datapoints. cluster_lengths and sum_cluster_lengths can be used
+     to index into out.
+
+
+   */
+
 fail:
   if (boundaries_d) {
     cudaFree(boundaries_d);

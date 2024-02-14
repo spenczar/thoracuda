@@ -6,14 +6,16 @@ function usage() {
     echo "Usage: tcdev <command> [options]"
     echo ""
     echo "Commands:"
-    echo "  build       Build the project in debug mode"
-    echo "  release     Build the project in release mode"
-    echo "  clean       Clean the project"
-    echo "  test        Run the tests"
-    echo "  benchmark   Run the benchmarks"
-    echo "  lint        Run the linter"
-    echo "  format	Format the code"
-    echo "  help        Display this help message"
+    echo "  build        Build the project in debug mode"
+    echo "  release      Build the project in release mode"
+    echo "  clean        Clean the project"
+    echo "  test         Run the tests"
+    echo "  benchmark    Run the benchmarks"
+    echo "  lint         Run the linter"
+    echo "  valgrind     Run valgrind against the tests"
+    echo "  update-rtags Update rtags"
+    echo "  format	 Format the code"
+    echo "  help         Display this help message"
 }
 
 function build() {
@@ -22,6 +24,11 @@ function build() {
     cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ../..
     make -j$(nproc)
     popd
+}
+
+function valgrind() {
+    build
+    exec valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose ./build/debug/tests/tests
 }
 
 function update-rtags {
@@ -46,7 +53,7 @@ function clean() {
 
 function test() {
     build
-    exec ./build/debug/tests/tests --skip-benchmarks "$@"
+    ASAN_OPTIONS=protect_shadow_gap=0:replace_intrin=0 exec ./build/debug/tests/tests --skip-benchmarks "$@"
 }
 
 function benchmark() {
@@ -97,6 +104,14 @@ function main() {
 	format)
 	    shift
 	    format "$@"
+	    ;;
+	valgrind)
+	    shift
+	    valgrind "$@"
+	    ;;
+	update-rtags)
+	    shift
+	    update-rtags "$@"
 	    ;;
 	help)
 	    usage
