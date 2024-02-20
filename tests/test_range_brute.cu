@@ -5,6 +5,7 @@
 
 #include "gnomonic_point_sources.hpp"
 #include "range_brute.h"
+#include "testutils.hpp"
 
 using Catch::Approx;
 using thoracuda::rangequery::Inputs;
@@ -47,3 +48,38 @@ TEST_CASE("range_query", "") {
   REQUIRE(actual == expected);
 }
 
+static std::vector<float> doubles_to_floats(const std::vector<double>& doubles) {
+  std::vector<float> floats;
+  floats.reserve(doubles.size());
+  for (auto d : doubles) {
+    floats.push_back(static_cast<float>(d));
+  }
+  return floats;
+}
+
+TEST_CASE("range_query_thor_data", "") {
+  auto gps = read_point_data();
+
+  std::vector<float> x = doubles_to_floats(gps.x);
+  std::vector<float> y = doubles_to_floats(gps.y);
+  std::vector<float> t = doubles_to_floats(gps.t);
+  std::vector<int> ids;
+  ids.reserve(gps.x.size());
+  for (int i = 0; i < gps.x.size(); i++) {
+    ids.push_back(i);
+  }
+
+  Inputs inputs = {x, y, t, ids};
+
+  RangeQueryParams params = {
+    thoracuda::rangequery::RangeQueryMetric::EUCLIDEAN,
+    0.03f,
+  };
+
+
+  BENCHMARK("range_query_thor") {
+    Results results = range_query(inputs, params);
+    return results;
+  };
+  
+}

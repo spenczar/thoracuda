@@ -26,4 +26,3 @@ thoracuda::GnomonicPointSources read_point_data() {
   }
   return thoracuda::GnomonicPointSources(x, y, t);
 }
-

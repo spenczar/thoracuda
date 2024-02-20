@@ -28,7 +28,8 @@ function build() {
 
 function valgrind() {
     build
-    exec valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose ./build/debug/tests/tests
+    valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose ./build/debug/tests/tests
+    valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose ./build/debug/tests/tests_cuda
 }
 
 function update-rtags {
@@ -53,12 +54,14 @@ function clean() {
 
 function test() {
     build
-    ASAN_OPTIONS=protect_shadow_gap=0:replace_intrin=0 exec ./build/debug/tests/tests --skip-benchmarks "$@"
+    ./build/debug/tests/tests --skip-benchmarks "$@"    
+    ASAN_OPTIONS=protect_shadow_gap=0:replace_intrin=0 ./build/debug/tests/tests_cuda --skip-benchmarks "$@"
 }
 
 function benchmark() {
     release
-    exec ./build/release/tests/tests
+    ./build/release/tests/tests "$@"
+    ./build/release/tests/tests_cuda "$@"    
 }
 
 function lint() {
