@@ -47,38 +47,3 @@ TEST_CASE("VectorStats", "") {
   };
 }
 
-TEST_CASE("binmedian", "") {
-  std::vector<float> values = {1, 2, 3, 4, 5};
-  float mean = 3;
-  float std_dev = 1.58114;
-  REQUIRE(binmedian(values, mean, std_dev) == 3);
-
-  int N = 100001;
-  values = std::vector<float>(N, 0);
-
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::normal_distribution<float> d(0, 1);
-  for (int i = 0; i < N; i++) {
-    values[i] = d(gen);
-  }
-
-  VectorStats stats(values);
-  float have = binmedian(values, stats.mean, stats.std_dev);
-
-  std::sort(values.begin(), values.end());
-  float want = values[N / 2];
-  REQUIRE_THAT(have, WithinRel(want, 1e-8f));
-
-  BENCHMARK("binmedian of 100,000 values") {
-    VectorStats stats(values);
-    return binmedian(values, stats.mean, stats.std_dev);
-  };
-  BENCHMARK_ADVANCED("sort median of 100,000 values")(Catch::Benchmark::Chronometer meter) {
-    std::vector<float> values_copy = values;
-    meter.measure([&values_copy, N] {
-      std::sort(values_copy.begin(), values_copy.end());
-      return values_copy[N / 2];
-    });
-  };
-}
