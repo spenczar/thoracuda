@@ -37,6 +37,10 @@ target_compile_options(tests_cuda PRIVATE "$<$<CONFIG:DEBUG>:-g>")
 target_compile_options(tests PRIVATE "$<$<CONFIG:RELEASE>:-O3>")
 target_compile_options(tests_cuda PRIVATE "$<$<CONFIG:RELEASE>:-O3>")
 
+# Architecture: Pascal and later, since I have a GTX 1080 at home.
+set_target_properties(tests_cuda PROPERTIES CUDA_ARCHITECTURES 61)
+
+
 include(CTest)
 include(Catch)
 catch_discover_tests(tests)

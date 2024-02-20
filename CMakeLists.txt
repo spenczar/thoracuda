@@ -30,6 +30,8 @@ add_library(thoracuda_cuda
   src/cuda/hotspot2d.cu
 )
 target_include_directories(thoracuda_cuda PUBLIC src/cuda)
+# Architecture: Pascal and later, since I have a GTX 1080 at home.
+set_target_properties(thoracuda_cuda PROPERTIES CUDA_ARCHITECTURES 61)
 
 # thoracuda-cli: the executable
 add_executable(thoracuda-cli
