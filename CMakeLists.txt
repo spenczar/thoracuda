@@ -18,12 +18,14 @@ add_library(thoracuda
   src/cpp/projections.cpp
   src/cpp/kdtree.cpp
   src/cpp/dbscan.cpp
+  src/cpp/stats.cpp
 )
 target_compile_features(thoracuda PUBLIC cxx_std_17)
 target_include_directories(thoracuda PUBLIC extern/eigen src/cpp)
 
 add_library(thoracuda_cuda
   src/cuda/rangearray.cu
+  src/cuda/range_brute.cu
   src/cuda/pairminmax.cu
   src/cuda/hotspot2d.cu
 )

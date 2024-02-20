@@ -17,6 +17,8 @@ add_executable(tests
   test_hotspot2d.cu
   test_kdtree.cpp
   test_dbscan.cpp
+  test_stats.cpp
+  test_range_brute.cu
 )
 target_link_libraries(tests PRIVATE thoracuda)
 target_link_libraries(tests PRIVATE thoracuda_cuda)
