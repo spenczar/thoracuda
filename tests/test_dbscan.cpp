@@ -2,13 +2,13 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+#include <random>
+
 #include <vector>
 #include "gnomonic_point_sources.hpp"
 #include "kdtree.hpp"
 #include "dbscan.hpp"
 #include "testutils.hpp"
-
-#include <random>
 
 using Eigen::Vector3d;
 using thoracuda::GnomonicPointSources;
