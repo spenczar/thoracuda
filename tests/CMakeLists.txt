@@ -23,7 +23,7 @@ add_executable(tests_cuda
   test_rangearray.cu
   test_pairminmax.cu
   test_hotspot2d.cu
-  test_range_brute.cu
+  test_rangequery.cu
 )
 target_link_libraries(tests_cuda PRIVATE thoracuda)
 target_link_libraries(tests_cuda PRIVATE thoracuda_cuda)
