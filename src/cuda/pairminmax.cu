@@ -36,13 +36,13 @@ cudaError_t xy_bounds_parallel_on_device(struct XYPair *xys_d, int n, struct XYB
   int threads_per_block = 512;
   int nblocks = (n + threads_per_block - 1) / threads_per_block;
   int shared_mem_size = threads_per_block * sizeof(struct XYBounds);
-  int npad = threads_per_block - nblocks;
+  int npad = threads_per_block - (n % threads_per_block);
 
   struct XYBounds *bounds_all_blocks = NULL;
   struct XYBounds *bounds_per_block_d = NULL;
   // Parallel reduction to find min/max
   // First, transform the xyvec into a bounds array
-  CUDA_OR_FAIL(cudaMalloc((void **)&bounds_all_blocks, n * sizeof(struct XYBounds)));
+  CUDA_OR_FAIL(cudaMalloc((void **)&bounds_all_blocks, (n + npad) * sizeof(struct XYBounds)));
 
   xyvec_bounds_transform_kernel<<<nblocks, threads_per_block>>>(xys_d, n, bounds_all_blocks);
   CUDA_CHECK_ERROR();
