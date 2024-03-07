@@ -4,7 +4,9 @@
 
 
 #include "rangequery/data_handle.cuh"
-#include "gridquery/gridquery.cuh"
+#include "gridquery/quantized_data.cuh"
+#include "gridquery/sorted_quantized_data.cuh"
+#include "gridquery/counts_grid.cuh"
 #include "pairminmax.h"
 
 using thoracuda::rangequery::DataHandle;
