@@ -1,15 +1,16 @@
-#include <vector>
-#include <stdexcept>
-#include <cmath>
-#include <algorithm>
 #include "stats.hpp"
+
+#include <algorithm>
+#include <cmath>
+#include <stdexcept>
+#include <vector>
 
 using std::size_t;
 
 using namespace thoracuda::stats;
 
 #define BINAPPROX_BIN_COUNT 1024
-#define BINMEDIAN_MIN_SIZE 32 // Below this size, use simple sort
+#define BINMEDIAN_MIN_SIZE 32  // Below this size, use simple sort
 
 VectorStats::VectorStats(const std::vector<float>& values) {
   if (values.size() == 0) {

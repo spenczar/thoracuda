@@ -9,58 +9,70 @@
 using thoracuda::GnomonicPointSources;
 
 namespace thoracuda {
-  namespace kdtree {
-    float median(std::vector<double> vals);
-    enum SplitDimension { X, Y };
-    
-    struct IDPoint {
-      int id;
-      float x;
-      float y;
-      float t;
-      IDPoint(int id, float x, float y, float t);
-    };
+namespace kdtree {
+float median(std::vector<double> vals);
+float binapprox_median(std::vector<float> vals);
+double binapprox_median(std::vector<double> vals);
+enum SplitDimension { X, Y };
 
-    struct IDPoints {
-      std::vector<int> ids;
-      GnomonicPointSources points;
+struct IDPoint {
+  int id;
+  float x;
+  float y;
+  float t;
+  IDPoint(int id, float x, float y, float t);
+};
 
-      // Merge two IDPoints objects
-      IDPoints(std::vector<int> ids, GnomonicPointSources points);
-      IDPoints(IDPoints p1, IDPoints p2);
-      IDPoints();
+struct IDPoints {
+  std::vector<int> ids;
+  GnomonicPointSources points;
 
-      bool empty();
-      IDPoint pop();
-      void push(IDPoint p);
-      void extend(IDPoints p);
-      int size();
-    };
+  // Merge two IDPoints objects
+  IDPoints(std::vector<int> ids, GnomonicPointSources points);
+  IDPoints(IDPoints p1, IDPoints p2);
+  IDPoints();
 
-    struct LeafNode {
-      GnomonicPointSources points;
-      std::vector<int> ids;
-      LeafNode(GnomonicPointSources points, std::vector<int> ids);
-      IDPoints range_query_x(float x_min, float x_max);
-      IDPoints range_query_y(float y_min, float y_max);
-    };
+  bool empty();
+  IDPoint pop();
+  void push(IDPoint p);
+  void extend(IDPoints p);
+  int size();
+};
 
-    struct KDNode {
-      SplitDimension dim;
-      float split;
+struct LeafNode {
+  GnomonicPointSources points;
+  std::vector<int> ids;
+  LeafNode(GnomonicPointSources points, std::vector<int> ids);
+  IDPoints range_query_x(float x_min, float x_max);
+  IDPoints range_query_y(float y_min, float y_max);
+};
 
-      KDNode *left_kd;
-      LeafNode *left_leaf;
+struct XYBounds {
+  float x_min;
+  float x_max;
+  float y_min;
+  float y_max;
+};
 
-      KDNode *right_kd;
-      LeafNode *right_leaf;
+struct KDNode {
+  SplitDimension dim;
+  float split;
 
-      KDNode(SplitDimension dim, GnomonicPointSources points, std::vector<int> ids, int max_leaf_size = 16);
-      ~KDNode();
+  XYBounds bounds;
 
-      IDPoints range_query(float x_min, float x_max, float y_min, float y_max);
-    };
+  KDNode *left_kd;
+  LeafNode *left_leaf;
 
-    KDNode build_kdtree(GnomonicPointSources points, int max_leaf_size = 16);
-  }  // namespace kdtree
+  KDNode *right_kd;
+  LeafNode *right_leaf;
+
+  KDNode(SplitDimension dim, GnomonicPointSources points, std::vector<int> ids, XYBounds parent_bounds,
+         int max_leaf_size = 16);
+  ~KDNode();
+
+  IDPoints range_query(float x_min, float x_max, float y_min, float y_max);
+};
+
+KDNode build_kdtree(GnomonicPointSources points, int max_leaf_size = 16);
+}  // namespace kdtree
 }  // namespace thoracuda

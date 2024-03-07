@@ -43,13 +43,13 @@
     }                         \
   } while (0)
 
-#define CUDA_OR_THROW(expr)		   \
-  do {					   \
-    err = (expr);			   \
-    if (err != cudaSuccess) {			 \
-      PRINT_CUDA_ERROR(err);						\
-      throw std::runtime_error(cudaGetErrorString(err));		\
-    }									\
+#define CUDA_OR_THROW(expr)                              \
+  do {                                                   \
+    err = (expr);                                        \
+    if (err != cudaSuccess) {                            \
+      PRINT_CUDA_ERROR(err);                             \
+      throw std::runtime_error(cudaGetErrorString(err)); \
+    }                                                    \
   } while (0)
 
 // CUDA_CHECK_ERROR: check if there is an outstanding CUDA error, and if so,
