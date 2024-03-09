@@ -34,7 +34,8 @@ add_library(thoracuda_cuda
   src/cuda/rangequery/offsets_table.cu
   src/cuda/gridquery/quantized_data.cu
   src/cuda/gridquery/sorted_quantized_data.cu
-  src/cuda/gridquery/counts_grid.cu    
+  src/cuda/gridquery/counts_grid.cu
+  src/cuda/gridquery/offsets_grid.cu
 )
 target_include_directories(thoracuda_cuda PUBLIC src/cuda)
 # Architecture: Pascal and later, since I have a GTX 1080 at home.

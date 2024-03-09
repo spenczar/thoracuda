@@ -21,8 +21,8 @@ CountsGrid::CountsGrid(int n_cells, struct XYBounds bounds) {
   this->n_cells = n_cells;
   this->bounds = bounds;
 
-  CUDA_OR_THROW(cudaMalloc(&this->counts, n_cells * n_cells * sizeof(int)));
-  CUDA_OR_THROW(cudaMemset(this->counts, 0, n_cells * n_cells * sizeof(int)));
+  CUDA_OR_THROW(cudaMalloc(&this->d_counts, n_cells * n_cells * sizeof(int)));
+  CUDA_OR_THROW(cudaMemset(this->d_counts, 0, n_cells * n_cells * sizeof(int)));
 }
 
 CountsGrid::CountsGrid(const DataHandle &dh, const SortedQuantizedData &sqd, int n_cells, struct XYBounds bounds) {
@@ -30,8 +30,8 @@ CountsGrid::CountsGrid(const DataHandle &dh, const SortedQuantizedData &sqd, int
   this->n_cells = n_cells;
   this->bounds = bounds;
 
-  CUDA_OR_THROW(cudaMalloc(&this->counts, n_cells * n_cells * sizeof(int)));
-  CUDA_OR_THROW(cudaMemset(this->counts, 0, n_cells * n_cells * sizeof(int)));
+  CUDA_OR_THROW(cudaMalloc(&this->d_counts, n_cells * n_cells * sizeof(int)));
+  CUDA_OR_THROW(cudaMemset(this->d_counts, 0, n_cells * n_cells * sizeof(int)));
 
   // 1. Count the number of occurrences of each cell.
 
@@ -47,11 +47,11 @@ CountsGrid::CountsGrid(const DataHandle &dh, const SortedQuantizedData &sqd, int
   CUDA_OR_THROW(cudaMalloc(&run_lengths, sqd.n * sizeof(int)));
   CUDA_OR_THROW(cudaMalloc(&num_runs, sizeof(int)));
 
-  CUDA_OR_THROW(cub::DeviceRunLengthEncode::Encode(d_temp_storage, temp_storage_bytes, sqd.sorted_quantized,
+  CUDA_OR_THROW(cub::DeviceRunLengthEncode::Encode(d_temp_storage, temp_storage_bytes, sqd.d_sorted_quantized,
                                                    run_keys_discarded, run_lengths, num_runs, sqd.n));
   CUDA_OR_THROW(cudaMalloc(&d_temp_storage, temp_storage_bytes));
 
-  CUDA_OR_THROW(cub::DeviceRunLengthEncode::Encode(d_temp_storage, temp_storage_bytes, sqd.sorted_quantized,
+  CUDA_OR_THROW(cub::DeviceRunLengthEncode::Encode(d_temp_storage, temp_storage_bytes, sqd.d_sorted_quantized,
                                                    run_keys_discarded, run_lengths, num_runs, sqd.n));
 
   CUDA_OR_THROW(cudaFree(d_temp_storage));
@@ -75,7 +75,7 @@ CountsGrid::CountsGrid(const DataHandle &dh, const SortedQuantizedData &sqd, int
   // 3. Map the run lengths to the counts grid.
   int n_threads = 256;
   int n_blocks = (num_runs_host + n_threads - 1) / n_threads;
-  map_cell_counts<<<n_blocks, n_threads>>>(this->counts, n_cells, sqd.sorted_quantized, run_offsets, run_lengths,
+  map_cell_counts<<<n_blocks, n_threads>>>(this->d_counts, n_cells, sqd.d_sorted_quantized, run_offsets, run_lengths,
                                            num_runs_host);
   CUDA_OR_THROW(cudaGetLastError());
 
@@ -89,7 +89,7 @@ std::vector<std::vector<int>> CountsGrid::to_host_vector() const {
   int n = this->n_cells * this->n_cells;
   int *host_counts = new int[n];
 
-  CUDA_OR_THROW(cudaMemcpy(host_counts, this->counts, n * sizeof(int), cudaMemcpyDeviceToHost));
+  CUDA_OR_THROW(cudaMemcpy(host_counts, this->d_counts, n * sizeof(int), cudaMemcpyDeviceToHost));
 
   std::vector<std::vector<int>> result;
   result.reserve(this->n_cells);
@@ -107,26 +107,26 @@ std::vector<std::vector<int>> CountsGrid::to_host_vector() const {
 }
 
 CountsGrid::~CountsGrid() {
-  if (this->counts != nullptr) {
-    cudaFree(this->counts);
+  if (this->d_counts != nullptr) {
+    cudaFree(this->d_counts);
   }
 }
 
 CountsGrid::CountsGrid(CountsGrid &&other) {
-  this->counts = other.counts;
+  this->d_counts = other.d_counts;
   this->n_cells = other.n_cells;
   this->bounds = other.bounds;
-  other.counts = nullptr;
+  other.d_counts = nullptr;
 }
 
 CountsGrid &CountsGrid::operator=(CountsGrid &&other) {
-  if (this->counts != nullptr) {
-    cudaFree(this->counts);
+  if (this->d_counts != nullptr) {
+    cudaFree(this->d_counts);
   }
-  this->counts = other.counts;
+  this->d_counts = other.d_counts;
   this->n_cells = other.n_cells;
   this->bounds = other.bounds;
-  other.counts = nullptr;
+  other.d_counts = nullptr;
   return *this;
 }
 

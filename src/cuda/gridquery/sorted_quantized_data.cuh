@@ -2,18 +2,24 @@
 
 #include <vector>
 
+#include "rangequery/data_handle.cuh"
+#include "rangequery/row.cuh"
+
 #include "gridquery/quantized_data.cuh"
 
 using thoracuda::gridquery::QuantizedData;
+using thoracuda::rangequery::Row;
+using thoracuda::rangequery::DataHandle;
 
 namespace thoracuda {
 namespace gridquery {
 
   struct SortedQuantizedData {
-    int *sorted_quantized;
+    int *d_sorted_quantized;
+    Row *d_rows;
     int n;
 
-    SortedQuantizedData(const QuantizedData &qd);
+    SortedQuantizedData(const QuantizedData &qd, const DataHandle &dh);
 
     ~SortedQuantizedData();
 

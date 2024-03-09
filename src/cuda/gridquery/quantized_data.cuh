@@ -12,7 +12,8 @@ namespace thoracuda {
 namespace gridquery {
 
   struct QuantizedData {
-    int *quantized;
+    int *d_quantized;
+    XYBounds bounds;
     int n;
 
     /// Makes an empty quantized data

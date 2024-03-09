@@ -18,7 +18,7 @@ namespace thoracuda {
 namespace gridquery {
 
 QuantizedData::QuantizedData() {
-  this->quantized = nullptr;
+  this->d_quantized = nullptr;
   this->n = 0;
 }
 
@@ -28,33 +28,25 @@ QuantizedData::QuantizedData(DataHandle &dh, int n_cells) {
   int n_blocks = (dh.n + n_threads - 1) / n_threads;
 
   // First, establish bounds of the data.
-  struct XYBounds *bounds = nullptr;
   struct XYPair *pairs = nullptr;
-  struct XYBounds *host_bounds = new struct XYBounds;
 
   CUDA_OR_FAIL(cudaMalloc(&pairs, dh.n * sizeof(struct XYPair)));
   copy_rows_to_xypairs<<<n_blocks, n_threads>>>(dh.rows, dh.n, pairs);
   CUDA_OR_FAIL(cudaGetLastError());
 
   // Now, find the min and max of the data.
-  CUDA_OR_FAIL(xy_bounds_parallel(pairs, dh.n, host_bounds));
+  CUDA_OR_FAIL(xy_bounds_parallel(pairs, dh.n, &(this->bounds)));
 
   // Now, quantize the data.
-  CUDA_OR_FAIL(cudaMalloc(&this->quantized, dh.n * sizeof(int2)));
-  quantize_data<<<n_blocks, n_threads>>>(pairs, dh.n, *host_bounds, n_cells, this->quantized);
+  CUDA_OR_FAIL(cudaMalloc(&this->d_quantized, dh.n * sizeof(int2)));
+  quantize_data<<<n_blocks, n_threads>>>(pairs, dh.n, this->bounds, n_cells, this->d_quantized);
   cudaDeviceSynchronize();
   CUDA_OR_FAIL(cudaGetLastError());
   this->n = dh.n;
 
 fail:
-  if (bounds != nullptr) {
-    delete bounds;
-  }
   if (pairs != nullptr) {
     cudaFree(pairs);
-  }
-  if (host_bounds != nullptr) {
-    delete host_bounds;
   }
   if (err != cudaSuccess) {
     throw std::runtime_error(cudaGetErrorString(err));
@@ -66,7 +58,7 @@ QuantizedData::QuantizedData(DataHandle &dh, int n_cells, struct XYBounds bounds
   int n_threads = 256;
   int n_blocks = (dh.n + n_threads - 1) / n_threads;
 
-  CUDA_OR_THROW(cudaMalloc(&this->quantized, dh.n * sizeof(int2)));
+  CUDA_OR_THROW(cudaMalloc(&this->d_quantized, dh.n * sizeof(int2)));
 
   // Copy the rows to a new array of XYPairs.
   struct XYPair *pairs = nullptr;
@@ -75,7 +67,7 @@ QuantizedData::QuantizedData(DataHandle &dh, int n_cells, struct XYBounds bounds
   CUDA_OR_THROW(cudaGetLastError());
 
   // Quantize the data.
-  quantize_data<<<n_blocks, n_threads>>>(pairs, dh.n, bounds, n_cells, this->quantized);
+  quantize_data<<<n_blocks, n_threads>>>(pairs, dh.n, bounds, n_cells, this->d_quantized);
 
   cudaDeviceSynchronize();
   CUDA_OR_THROW(cudaGetLastError());
@@ -92,25 +84,25 @@ fail:
 }
 
 QuantizedData::~QuantizedData() {
-  if (this->quantized != nullptr) {
-    cudaFree(this->quantized);
+  if (this->d_quantized != nullptr) {
+    cudaFree(this->d_quantized);
   }
 }
 
 QuantizedData::QuantizedData(QuantizedData &&other) {
-  this->quantized = other.quantized;
+  this->d_quantized = other.d_quantized;
   this->n = other.n;
-  other.quantized = nullptr;
+  other.d_quantized = nullptr;
   other.n = 0;
 }
 
 QuantizedData &QuantizedData::operator=(QuantizedData &&other) {
-  if (this->quantized != nullptr) {
-    cudaFree(this->quantized);
+  if (this->d_quantized != nullptr) {
+    cudaFree(this->d_quantized);
   }
-  this->quantized = other.quantized;
+  this->d_quantized = other.d_quantized;
   this->n = other.n;
-  other.quantized = nullptr;
+  other.d_quantized = nullptr;
   other.n = 0;
   return *this;
 }
@@ -121,7 +113,7 @@ std::vector<int2> QuantizedData::to_host_vector() const {
   result.reserve(this->n);
   int *host_quantized = new int[this->n];
 
-  CUDA_OR_THROW(cudaMemcpy(host_quantized, this->quantized, this->n * sizeof(int), cudaMemcpyDeviceToHost));
+  CUDA_OR_THROW(cudaMemcpy(host_quantized, this->d_quantized, this->n * sizeof(int), cudaMemcpyDeviceToHost));
   for (int i = 0; i < this->n; i++) {
     int x = host_quantized[i] >> 16;
     int y = host_quantized[i] & 0xFFFF;

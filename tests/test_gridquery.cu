@@ -33,6 +33,11 @@ TEST_CASE("grid query quantization", "") {
     REQUIRE(result[i].x == expected[i].x);
     REQUIRE(result[i].y == expected[i].y);
   }
+
+  REQUIRE(qd.bounds.xmin == 0.0f);
+  REQUIRE(qd.bounds.xmax == 1.0f);
+  REQUIRE(qd.bounds.ymin == -0.5f);
+  REQUIRE(qd.bounds.ymax == 0.5f);
 }
 
 TEST_CASE("grid query counting", "") {
@@ -45,7 +50,7 @@ TEST_CASE("grid query counting", "") {
 
   int n_cells = 10;
   QuantizedData qd(data, n_cells);
-  SortedQuantizedData sqd(qd);
+  SortedQuantizedData sqd(qd, data);
 
   struct XYBounds bounds = {
     0.0f, 1.0f, -0.5f, 0.5f
